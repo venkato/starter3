@@ -1,6 +1,13 @@
 # Compiled class file
 *.class
 
+.project
+.classpath
+.settings/
+.gradle/
+gradlew.bat
+*.iml
+
 # Log file
 *.log
 
@@ -11,12 +18,31 @@
 .mtj.tmp/
 
 # Package Files #
-*.jar
 *.war
 *.ear
 *.zip
 *.tar.gz
 *.rar
+custom/
+custom1/
+custom2/
+custom3/
+build/
+onejar/jrrutilities.jar
+firstdownload/javarunner.bat
+firstdownload/javarunnerw.bat
+firstdownload/.gradle/
+firstdownload/build/
+firstdownload/logs/
+firstdownload/jrrdownload/
+JrrUtilities/.gradle/
+JrrUtilities/build/
+JrrStarter/build/
+JrrStarter/.gradle/
+JrrInit/build/
+JrrInit/.gradle/
+libs/copy/
+
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
