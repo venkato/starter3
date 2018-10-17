@@ -2,9 +2,10 @@ package net.sf.jremoterun.utilities.classpath
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.groovystarter.GroovyMethodRunner
 import net.sf.jremoterun.utilities.groovystarter.GroovyMethodRunnerParams
+import net.sf.jremoterun.utilities.groovystarter.LoadScriptFromFileUtils
+import net.sf.jremoterun.utilities.groovystarter.runners.RunnableWithParamsFactory2
 
 import java.util.logging.Logger
 
@@ -13,33 +14,45 @@ public abstract class AddFilesToClassLoaderGroovy extends AddFilesToClassLoaderC
 
     private static final Logger log = Logger.getLogger(JrrClassUtils.currentClass.name);
 
-    JrrGroovyScriptRunner groovyScriptRunner = GroovyMethodRunner.groovyScriptRunner;
+    public RunnableWithParamsFactory2 groovyScriptRunner = new RunnableWithParamsFactory2();
 
 
     List<File> addedGroovyClassPathFiles = []
 
     void addFromGroovyFile(File file) {
-        JrrUtilities3.checkFileExist(file)
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
 //        Thread.dumpStack()
         if (addedGroovyClassPathFiles.contains(file)) {
             log.info "${file} already added"
         } else {
-            file = file.absoluteFile.canonicalFile
-            assert groovyScriptRunner != null
-            groovyScriptRunner.addFilesToClassLoaderF(file, this);
+            file = file.getAbsoluteFile().getCanonicalFile()
+            //assert groovyScriptRunner != null
+            //groovyScriptRunner.addFilesToClassLoaderF(file, this);
+            groovyScriptRunner.loadSettingsWithParam(file,this)
+//            Object script = groovyScriptRunner.groovyScriptRunner.parseConfig(file)
+//            LoadScriptFromFileUtils.runWithParams(script,this,null)
+//            groovyScriptRunner.runScript(script,this)
             log.fine "added files count : ${addedFiles2.size()}"
             addedGroovyClassPathFiles.add(file)
         }
     }
 
 
-    void addFilesFromGmrp() {
-        GroovyMethodRunnerParams gmrp = GroovyMethodRunnerParams.gmrp
-        if (gmrp == null) {
-            throw new IllegalStateException("gmrp not inited")
-        }
-        addAll(gmrp.addFilesToClassLoader.addedFiles2)
+    @Deprecated
+    void addFromGroovyTextFile(String groovyFileContent, String scriptName) {
+        groovyScriptRunner.loadSettingsWithParam(groovyFileContent,this)
     }
 
+
+    void addFilesFromGmrp() {
+        addAll(GroovyMethodRunnerParams.gmrpn.addFilesToClassLoader.addedFiles2)
+    }
+
+
+    void addFromGroovyFile(ToFileRef2 file) {
+        File f3 = file.resolveToFile()
+        assert f3 != null
+        addFromGroovyFile(f3)
+    }
 
 }

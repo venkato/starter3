@@ -2,9 +2,9 @@ package net.sf.jremoterun.utilities.groovystarter.runners
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.classpath.ClRef
 
+import java.util.concurrent.Callable
 import java.util.logging.Logger
 
 @CompileStatic
@@ -12,63 +12,64 @@ class RunnableFactory {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
-    public static ClassLoader thisClassLoader = JrrClassUtils.currentClassLoader
-    public static GroovyClassLoader groovyClassLoader
 
-    static void receiveGroovyClassLoader() {
-        if (groovyClassLoader == null) {
-            if (thisClassLoader instanceof GroovyClassLoader) {
-                groovyClassLoader = (GroovyClassLoader) thisClassLoader;
-            } else {
-                groovyClassLoader = new GroovyClassLoader(thisClassLoader)
-            }
-        }
+
+
+
+    static RunnableText createRunnerText(String text) {
+        return createRunnerFromText(text, GroovyConfigLoaderJrr.configLoader)
     }
 
-
-    static Runnable createRunner(File file) {
-        receiveGroovyClassLoader()
-        return createRunnerFromFile2(file, groovyClassLoader)
+    static RunnableFile createRunner(File file) {
+        return createRunnerFromFile2(file, GroovyConfigLoaderJrr.configLoader)
     }
 
-    static Runnable createRunnerFromFile2(File file, GroovyClassLoader groovyClassLoader) {
-        JrrUtilities3.checkFileExist(file)
-        if (!file.file) {
+    static RunnableFile createRunnerFromFile2(File file, GroovyConfigLoaderGeneric groovyClassLoader) {
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
+        if (!file.isFile()) {
             throw new IllegalArgumentException("Not a file : ${file}")
         }
-        Runnable r = new RunnableFile(file, groovyClassLoader)
-        return r;
+        return new RunnableFile(file, groovyClassLoader)
+    }
+
+    static RunnableText createRunnerFromText(String text, GroovyConfigLoaderGeneric groovyClassLoader) {
+        return new RunnableText(text, groovyClassLoader)
     }
 
 
-    static Runnable createRunner(Class clazz) {
+    static RunnableClosure createRunnerClosure(Callable callable) {
+        return new RunnableClosure(callable)
+    }
+
+    static RunnableClassName2 createRunner(Class clazz) {
         assert clazz != null
         Runnable r = new RunnableClassName2(clazz)
         return r;
     }
 
-    static Runnable createRunner(String className) {
+    static RunnableClassName createRunner(String className) {
         assert className != null
-        Runnable r = new RunnableClassName(new ClRef(className));
-        return r;
+        return new RunnableClassName(new ClRef(className));
     }
 
-//    static Runnable createRunner(ClRefRef className) {
-//        return createRunner(className.clRef)
-//    }
 
-    static Runnable createRunner(ClRefRef className) {
-        return createRunnerFromClass(className, thisClassLoader)
+    static RunnableClassName createRunner(ClRefRef className) {
+        return createRunnerFromClass(className, GroovyClassLoaderDefault.thisClassLoader)
     }
 
-    static Runnable createRunnerFromClass(ClRefRef cnr, ClassLoader classLoader) {
+    static RunnableClassName createRunnerFromClass(ClRefRef cnr, ClassLoader classLoader) {
         assert cnr != null
-        RunnableClassName runnableClassName = new RunnableClassName(cnr.getClRef(), classLoader)
-        return runnableClassName;
+        return  new RunnableClassName(cnr.getClRef(), classLoader)
     }
 
 
 
+
+    static void runRunner(File file) {
+        assert file.exists()
+        Runnable runner = createRunner(file)
+        runner.run()
+    }
 
     static void runRunner(Class clazz) {
         assert clazz != null
@@ -83,34 +84,16 @@ class RunnableFactory {
     }
 
     static void runRunner(ClRefRef className) {
-//        runRunner2(className.clRef)
-        createRunnerFromClass(className.getClRef(), thisClassLoader).run()
+        if(className==null){
+            throw new NullPointerException('class name is null')
+        }
+         createRunnerFromClass(className.getClRef(),  GroovyClassLoaderDefault.thisClassLoader).run()
     }
 
-//    static void runRunner2(ClRef className) {
-//        createRunnerFromClass(className, thisClassLoader).run()
-//    }
 
     static void runRunner2(ClRefRef className,ClassLoader classLoader2) {
         createRunnerFromClass(className, classLoader2).run()
     }
 
-
-
-
-
-//    static void runRunnableFromObject(Object obj) {
-//        assert obj != null
-//        if (obj instanceof Runnable) {
-//            Runnable r = obj as Runnable
-//            r.run()
-//        } else if (obj instanceof Script) {
-//            Script s = (Script) obj;
-//            s.run()
-//        } else {
-//            throw new Exception("unsupport type ${obj}")
-//        }
-//
-//    }
 
 }

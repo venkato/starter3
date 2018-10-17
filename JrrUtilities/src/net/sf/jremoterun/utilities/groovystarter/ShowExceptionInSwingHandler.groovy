@@ -2,7 +2,6 @@ package net.sf.jremoterun.utilities.groovystarter;
 
 import groovy.transform.CompileStatic;
 import net.sf.jremoterun.utilities.JrrClassUtils;
-import net.sf.jremoterun.utilities.JrrUtilities3;
 import net.sf.jremoterun.utilities.NewValueListener;
 
 import javax.swing.*
@@ -21,20 +20,25 @@ public class ShowExceptionInSwingHandler extends PrintExceptionListener {
     @Override
     public void newValue(Throwable throwable) {
         genericStuff(throwable)
-        JFrame frame = JrrUtilities3.showException("jrr groovy runner", throwable);
+        JFrame frame = net.sf.jremoterun.utilities.JrrUtilitiesShowE.showException("jrr groovy runner", throwable);
         SwingUtilities.invokeLater{
-            JPanel panel = new JPanel(new FlowLayout())
-            JButton terminateButton = new JButton("Terminate JVM");
-            terminateButton.addActionListener{
-                System.exit(1);
-            }
-            panel.add(terminateButton)
-            JButton closeButton = new JButton("Close without terminate");
-            closeButton.addActionListener{
-                frame.dispose();
-            }
-            panel.add(closeButton)
+            JPanel panel = createCloseTerminateButtons(frame)
             frame.getContentPane().add(panel,BorderLayout.SOUTH)
         };
+    }
+
+    JPanel createCloseTerminateButtons(JFrame frame ){
+        JPanel panel = new JPanel(new FlowLayout())
+        JButton terminateButton = new JButton("Terminate JVM");
+        terminateButton.addActionListener{
+            SystemExit.exit(1);
+        }
+        panel.add(terminateButton)
+        JButton closeButton = new JButton("Close without terminate");
+        closeButton.addActionListener{
+            frame.dispose();
+        }
+        panel.add(closeButton)
+        return panel;
     }
 }

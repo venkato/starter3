@@ -8,39 +8,35 @@ import net.sf.jremoterun.utilities.groovystarter.seqpattern.JrrRunnerPhaseI;
 public enum JrrRunnerPhase2 implements JrrRunnerPhaseI {
 
     // On start classpath status :
-    // JrrJavasist - yes, Javassist - no
+    // JrrJavasist - yes, Javassist - yes
     afterCoreLibAdded,
     setSystemOut,
+    java11ModuleDisable,
     userConfigEnriched,
+    userConfigWinEnriched,
+    userConfig2Enriched,
     hostConfigLinuxEnriched,
     hostConfigWindowsEnriched,
     directoryConfigEnriched,
+    /**
+     *  No custom code set by framework
+     */
     setDependecyResolver,
     addClassPathFiles,
+    /**
+     *  No custom code set by framework
+     */
     afterClassPathSet,
     findMainClass,
     classImplementionTasks,
+    checkIfMainJavaMethod,
     createClassInstance,
     runTargetMethod,
+    /**
+     *  No custom code set by framework
+     */
     targetMethodFinishedNormally,
     normalExit;
-
-
-//    static int maxBefore = JrrRunnerPhase.calcMaxValue() + 1;
-
-//    @Override
-//    public int offset() {
-//        return ordinal() + maxBefore;
-//    }
-
-
-//    public static int calcMaxValue() {
-//        int max = 0;
-//        for (JrrRunnerPhase2 v : JrrRunnerPhase2.values()) {
-//            max = Math.max(v.offset(), max);
-//        }
-//        return max;
-//    }
 
 
     @Override

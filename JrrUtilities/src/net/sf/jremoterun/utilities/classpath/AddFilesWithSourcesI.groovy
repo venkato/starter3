@@ -12,6 +12,8 @@ public interface AddFilesWithSourcesI {
 
     void addSourceM(MavenId mavenId);
 
+    File addSourceMNoExceptionOnMissing(MavenId mavenId);
+
     void addSourceGeneric(Object object);
 
     void addSourceGenericAll(List objects)

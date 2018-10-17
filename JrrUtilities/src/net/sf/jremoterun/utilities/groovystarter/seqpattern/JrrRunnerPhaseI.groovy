@@ -5,7 +5,5 @@ import groovy.transform.CompileStatic;
 @CompileStatic
 public interface JrrRunnerPhaseI {
 
-//    int offset();
-
     JrrRunnerPhaseI nextPhase();
 }

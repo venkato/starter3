@@ -3,7 +3,7 @@ package net.sf.jremoterun.utilities.groovystarter.seqpattern
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
 import net.sf.jremoterun.utilities.classpath.ClRef
-import net.sf.jremoterun.utilities.classpath.ClassNameReference
+
 import net.sf.jremoterun.utilities.groovystarter.runners.RunnableClassName
 
 import java.util.concurrent.ConcurrentHashMap
@@ -26,7 +26,7 @@ class SeqPatternRunnerGmrp extends SeqPatternRunner {
 
     void setPhaseChanger(JrrRunnerPhaseI phase, Runnable r) {
         if (isPhasePassed(phase)) {
-            throw new Exception("Phase ${phase} passed, current : ${jrrRunnerPhase}")
+            throw new Exception("Phase ${phase} passed, current : ${currentPhaseEnhanced}")
         }
         phaseChanger.put(phase, r);
     }

@@ -1,30 +1,38 @@
 import groovy.transform.CompileStatic
+import net.sf.jremoterun.utilities.JrrClassUtils
 import net.sf.jremoterun.utilities.classpath.*
 import net.sf.jremoterun.utilities.groovystarter.*
+import net.sf.jremoterun.utilities.groovystarter.runners.RunnableFactory
+
+import java.util.logging.Logger
 
 // ClassName used in ConsoleRedirectFD
 @CompileStatic
-class FirstDownloadConfig extends GroovyRunnerConfigurator2 {
+class FirstDownloadConfig implements Runnable {
+
+    private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
 
-    public static ClRef initClass = new ClRef('net.sf.jremoterun.utilities.nonjdk.firstdownload.FdInit')
+    public static ClRef initClass = new ClRef('net.sf.jremoterun.utilities.nonjdk.firstdownload.starter.FdInit')
 
-    public static Runnable customRunner = {createRunnerFromClass(initClass).run() }
+    public static Runnable customRunner = RunnableFactory.createRunner(initClass)
+
+    GmrpRunnerHelper h= GmrpRunnerHelper.get()
 
     @Override
-    void doConfig() {
+    void run() {
         runCustomConfig();
-        gmrp.addListener(JrrRunnerPhase.createClassLoaderAdder,false, this.&bcs );
+        h.gmrpn.addListener(JrrRunnerPhase.createClassLoaderAdder,false, this.&bcs );
     }
 
     void runCustomConfig(){
-        File parentFile = gmrp.grHome.parentFile
+        File parentFile = h.gmrpn.grHome.parentFile
         assert parentFile.exists()
         File dfFile = new File(parentFile,"FirstDownloadCustomConfig.groovy")
         dfFile = dfFile.canonicalFile.absoluteFile
         log.info "checking custom config : ${dfFile} , exist = ${dfFile.exists()}"
         if(dfFile.exists()) {
-            createRunnerFromFile(dfFile).run()
+            RunnableFactory.runRunner(dfFile)
         }
     }
 
@@ -34,12 +42,12 @@ class FirstDownloadConfig extends GroovyRunnerConfigurator2 {
         }
         MavenDefaultSettings.mavenDefaultSettings.jrrDownloadDir.mkdirs();
 
-        AddFilesToUrlClassLoaderGroovy b = gmrp.addFilesToClassLoader;
+        AddFilesToUrlClassLoaderGroovy b = h.gmrpn.addFilesToClassLoader;
         File firstDownloadRepoPureGit = new File(MavenDefaultSettings.mavenDefaultSettings.jrrDownloadDir,'git/https/github.com/venkato/starter3/git')
         if(firstDownloadRepoPureGit.exists()){
         }else{
             log.info "not found : ${firstDownloadRepoPureGit}"
-            firstDownloadRepoPureGit = gmrp.grHome
+            firstDownloadRepoPureGit = h.gmrpn.grHome
 //            firstDownloadRepoPureGit = new File("..").absoluteFile.canonicalFile
         }
         b.addF new File(firstDownloadRepoPureGit,"firstdownload/src")
