@@ -3,28 +3,31 @@ package net.sf.jremoterun.utilities.classpath
 import groovy.io.FileType
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.NewValueListener
 import net.sf.jremoterun.utilities.UrlCLassLoaderUtils
 import net.sf.jremoterun.utilities.UrlToFileConverter
-import net.sf.jremoterun.utilities.groovystarter.GroovyMethodRunnerParams
 
+import java.lang.reflect.Array
 import java.util.logging.Logger
 
 @CompileStatic
 public abstract class AddFilesToClassLoaderCommon {
 
-    public static final Logger logStatic = Logger.getLogger(JrrClassUtils.currentClass.name);
+    public static final Logger logStatic = Logger.getLogger(JrrClassUtils.getCurrentClass().getName());
 
     public Logger logAdder = logStatic;
 
     public boolean isLogFileAlreadyAdded = true
+    public boolean checkJarFileIsZipArchive = true
 
     public volatile MavenCommonUtils mavenCommonUtils = new MavenCommonUtils()
+
+    // used ?
     NewValueListener<File> addFileListener
 
     HashSet<File> addedFiles2 = []
     HashSet<MavenId> addedMavenIds = []
+    NewValueListener<Throwable> onExceptionAction;
 //    boolean downloadSources = false;
 
 
@@ -42,24 +45,56 @@ public abstract class AddFilesToClassLoaderCommon {
     }
 
 
+    // use add method
+    @Deprecated
     void addBinaryWithSource(BinaryWithSourceI fileWithSource) throws Exception {
         addF(fileWithSource.resolveToFile());
     }
 
+    // use add method
+    @Deprecated
     void addFile(File file) throws Exception {
-        JrrUtilities3.checkFileExist(file)
-        file = file.canonicalFile.absoluteFile;
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
+        file = file.getCanonicalFile().getAbsoluteFile();
         if (addedFiles2.contains(file)) {
             if (isLogFileAlreadyAdded) {
                 logAdder.info "file already added ${file}"
 //                Thread.dumpStack()
             }
         } else {
-            addFileImpl(file);
-            addedFiles2.add(file)
+            boolean addFile12334 = true
+            if (checkJarFileIsZipArchive) {
+                String fileName = file.getName()
+                if (fileName.endsWith('.zip') || fileName.endsWith('.jar')) {
+                    if(!file.isFile()){
+                        addFile12334 = false
+                        onException new Exception("Not a file : ${file}")
+                    }else {
+                        boolean isZip = true
+                        try {
+                            isZip = JrrZipUtils.isZipArchive(file)
+                        }catch (Exception e){
+                            addFile12334 = false
+                            onException(e)
+                        }
+                        if (!isZip) {
+                            addFile12334 = false
+                            onException new Exception("Not zip archive : ${file}")
+                        }
+                    }
+                }
+                if(file.isDirectory()){
+
+                }
+            }
+            if(addFile12334) {
+                addFileImpl(file);
+                addedFiles2.add(file)
+            }
         }
     }
 
+    // use add method
     void addMavenPath(MavenPath mavenPath) {
         mavenPath = mavenPath.normalize()
         File mavenPathF = mavenCommonUtils.findMavenPath(mavenPath)
@@ -84,9 +119,10 @@ public abstract class AddFilesToClassLoaderCommon {
     void addMavenLatestDownloadedVersion(MavenId artifact) throws IOException {
         MavenId lastestInRepo = mavenCommonUtils.findLatestMavenOrGradleVersion(artifact);
         if (lastestInRepo == null) {
-            throw new FileNotFoundException("${artifact}")
+            onException new FileNotFoundException("${artifact}")
+        }else {
+            addM(lastestInRepo)
         }
-        addM(lastestInRepo)
 //        MavenId lastestInRepo = mavenCommonUtils.findLatestMavenOrGradleVersion(artifact);
 
     }
@@ -130,21 +166,21 @@ public abstract class AddFilesToClassLoaderCommon {
         if (found) {
             addedMavenIds.add(artifact)
         } else {
-            throw new FileNotFoundException("${artifact} and mavenDependenciesResolver is null and jrrDownloadDir is null")
+            onException new FileNotFoundException("${artifact} and mavenDependenciesResolver is null and jrrDownloadDir is null")
         }
     }
 
-    void addMMany(List<MavenId> mavenIds){
+    void addMMany(List<MavenId> mavenIds) {
         addAll(mavenIds)
     }
 
-    void addMWithDepsMany(List<MavenId> mavenIds){
+    void addMWithDepsMany(List<MavenId> mavenIds) {
         mavenIds.each {
             addMWithDependeciesDownload(it)
         }
     }
 
-    void addFMany(List<File> mavenIds){
+    void addFMany(List<File> mavenIds) {
         addAll(mavenIds)
     }
 
@@ -166,7 +202,7 @@ public abstract class AddFilesToClassLoaderCommon {
      * throw exception if not found
      */
     File findMavenOrGradleOrUrl(MavenId mavenId) {
-        if (mavenId.version == mavenCommonUtils.lastVersionInd) {
+        if (mavenId.version == MavenCommonUtils.lastVersionInd) {
             MavenId mavenId2 = mavenCommonUtils.findLatestMavenOrGradleVersionEx(mavenId);
             return mavenCommonUtils.findMavenOrGradle(mavenId2)
         }
@@ -175,7 +211,8 @@ public abstract class AddFilesToClassLoaderCommon {
             return file
         }
         if (mavenCommonUtils.downloadDir == null) {
-            throw new DownloadDirNotSetException()
+            onException new DownloadDirNotSetException()
+            throw  new DownloadDirNotSetException()
         }
         URL url = buildMavenArtifactUrl(mavenId);
         file = mavenCommonUtils.downloadJarFromUrl(url)
@@ -188,6 +225,8 @@ public abstract class AddFilesToClassLoaderCommon {
         return url;
     }
 
+    // use add method
+    @Deprecated
     void addF(File file) {
         addFile(file)
     }
@@ -198,58 +237,76 @@ public abstract class AddFilesToClassLoaderCommon {
     }
 
     void addMWithDependeciesDownload(MavenId artifact) throws IOException {
-        if (mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver == null) {
-            throw new NullPointerException("mavenDependenciesResolver is null : add dropship, artifact = ${artifact}")
-        }
-        List<MavenId> dependencies = mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver.resolveAndDownloadDeepDependencies(artifact, mavenCommonUtils.fileType == MavenFileType2.source.fileSuffix, true)
-        if (dependencies.size() == 0) {
-            throw new Exception("Failed resolve : ${artifact}")
-        }
-        dependencies = dependencies.findAll { mavenCommonUtils.findMavenOrGradle(it) != null }
-        if (dependencies.size() == 0) {
-            throw new Exception("Failed resolve : ${artifact}")
-        }
-        addGenericEnteries(dependencies)
-//        addMavenExisted(dependencies)
+        MavenIdAndRepo mavenIdAndRepo = new MavenIdAndRepo(artifact, null)
+        addMWithDependeciesDownload(mavenIdAndRepo)
     }
 
-    File resolveMavenId(MavenId artifact) {
+    void addMWithDependeciesDownload(MavenIdAndRepoContains artifact) throws IOException {
+        addMWithDependeciesDownload (artifact.mavenIdAndRepo)
+    }
+
+    boolean isNeedDownloadMavenSources(){
+        return mavenCommonUtils.fileType == MavenFileType2.source.fileSuffix || this instanceof AddFilesWithSourcesI
+    }
+
+    void addMWithDependeciesDownload(MavenIdAndRepo artifact) throws IOException {
+        try {
+            if (mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver == null) {
+                onException new NullPointerException("mavenDependenciesResolver is null : add dropship, artifact = ${artifact}")
+            }
+            List<MavenId> dependencies = mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver.resolveAndDownloadDeepDependencies(artifact.m, isNeedDownloadMavenSources(), true, artifact.repo)
+            if (dependencies.size() == 0) {
+                onException new Exception("Failed resolve : ${artifact}")
+            }
+            dependencies = dependencies.findAll { mavenCommonUtils.findMavenOrGradle(it) != null }
+            if (dependencies.size() == 0) {
+                onException new Exception("Failed resolve : ${artifact}")
+            }
+            addGenericEnteries(dependencies)
+//        addMavenExisted(dependencies)
+        }catch(Throwable e){
+            onException e
+        }
+    }
+
+    File resolveMavenId(MavenIdAndRepo artifact) {
         File file
-        if (artifact.version == mavenCommonUtils.lastVersionInd) {
-            MavenId version = mavenCommonUtils.findLatestMavenOrGradleVersion(artifact)
+        if (artifact.m.version == MavenCommonUtils.lastVersionInd) {
+            MavenId version = mavenCommonUtils.findLatestMavenOrGradleVersion(artifact.m)
             if (version != null) {
                 file = mavenCommonUtils.findMavenOrGradle(version)
             }
         } else {
-            file = mavenCommonUtils.findMavenOrGradle(artifact);
+            file = mavenCommonUtils.findMavenOrGradle(artifact.m);
         }
         if (file != null) {
             return file
         }
         if (mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver == null) {
-            file = onMissingMavenId(artifact)
+            file = onMissingMavenId(artifact.m)
             assert file != null
             return file
         } else {
-            List<MavenId> dependencies3 = mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver.resolveAndDownloadDeepDependencies(artifact, false, false)
+            List<MavenId> dependencies3 = mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver.resolveAndDownloadDeepDependencies(artifact.m,isNeedDownloadMavenSources(), false, artifact.repo)
 //            logAdder.info "found dep = ${dependencies3}"
-            file = mavenCommonUtils.findMavenOrGradle(artifact)
+            MavenId mavenId4 = artifact.m
+            file = mavenCommonUtils.findMavenOrGradle(artifact.m)
             if (file == null) {
                 if (dependencies3.size() == 0) {
-                    throw new Exception("failed find dep for ${artifact}")
+                    onException new Exception("failed find dep for ${artifact}")
                 }
                 MavenId mavenId3 = dependencies3.find {
-                    it.artifactId == artifact.artifactId && it.groupId == artifact.groupId && it.version == artifact.version
+                    it.artifactId == artifact.m.artifactId && it.groupId == artifact.m.groupId && it.version == artifact.m.version
                 }
                 if (mavenId3 == null) {
-                    throw new Exception("failed find dep for ${artifact}, got from resolver : ${dependencies3}")
+                    onException new Exception("failed find dep for ${artifact}, got from resolver : ${dependencies3}")
                 }
-                artifact = mavenId3
-                file = mavenCommonUtils.findMavenOrGradle(artifact)
+                mavenId4 = mavenId3
+                file = mavenCommonUtils.findMavenOrGradle(mavenId3)
 //                logAdder.info "found file = ${file}"
             }
             if (file == null) {
-                file = onMissingMavenId(artifact)
+                file = onMissingMavenId(mavenId4)
                 assert file != null
                 return file
             } else {
@@ -259,8 +316,19 @@ public abstract class AddFilesToClassLoaderCommon {
         }
     }
 
+    File resolveMavenId(MavenId artifact) {
+        MavenIdAndRepo mavenIdAndRepo = new MavenIdAndRepo(artifact, null);
+        return resolveMavenId(mavenIdAndRepo)
+    }
+
     void addM(MavenIdContains artifact) throws IOException {
         addM(artifact.getM());
+    }
+
+    void addM(MavenIdAndRepoContains artifact) throws IOException {
+        File file = resolveMavenId(artifact.getMavenIdAndRepo())
+        addF(file);
+
     }
 
     void addM(MavenId artifact) throws IOException {
@@ -278,9 +346,9 @@ public abstract class AddFilesToClassLoaderCommon {
                     return file;
                 }
             }
-            throw new FileNotFoundException("Failed resolve ${artifact},   dependenciesResolver is null")
+            onException new FileNotFoundException("Failed resolve ${artifact},   dependenciesResolver is null")
         }
-        throw new Exception("Failed resolve : ${artifact}")
+        onException new Exception("Failed resolve : ${artifact}")
     }
 
     void addUrl(URL url) {
@@ -290,7 +358,7 @@ public abstract class AddFilesToClassLoaderCommon {
         if (url.protocol == 'file') {
             file1 = UrlToFileConverter.c.convert url
             if (file1 == null) {
-                throw new IllegalArgumentException(asS)
+                onException new IllegalArgumentException(asS)
             }
         } else {
             file1 = mavenCommonUtils.downloadJarFromUrl(url)
@@ -301,14 +369,14 @@ public abstract class AddFilesToClassLoaderCommon {
     Collection<File> addAllJarsInDir(File dir) {
         Collection<File> files5 = addAllJarsInDirImpl(dir)
         if (files5.size() == 0) {
-            throw new FileNotFoundException("not jars in dir ${dir}")
+            onException new FileNotFoundException("not jars in dir ${dir}")
         }
         return files5
     }
 
     Collection<File> addAllJarsInDirImpl(File dir) {
-        JrrUtilities3.checkFileExist(dir);
-        assert dir.directory
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(dir);
+        assert dir.isDirectory()
         Collection<File> files = dir.listFiles().findAll { it.isFile() }
         files = files.findAll { it.name.endsWith('.jar') }
         files.each {
@@ -316,13 +384,13 @@ public abstract class AddFilesToClassLoaderCommon {
                 addFile(it);
             } catch (Exception e) {
                 logAdder.severe("failed add file : ${it}")
-                throw e
+                onException e
             }
         }
         return files
     }
 
-    Collection<File> addAllJarsInDirAndSubdirsDeep(File dir) {
+    List<File> getJarsInDirAndSubDirs(File dir){
         Map<String, Object> params = [
                 type      : FileType.FILES,
                 nameFilter: ~/.*\.jar/,
@@ -332,34 +400,58 @@ public abstract class AddFilesToClassLoaderCommon {
             addFile(f);
             addedFiles5.add(f)
         });
+        return addedFiles5
+    }
+
+    Collection<File> addAllJarsInDirAndSubdirsDeep(File dir) {
+        List<File> addedFiles5 = getJarsInDirAndSubDirs(dir)
         if (addedFiles5.size() == 0) {
-            throw new FileNotFoundException("not jars in dir and subdir ${dir}")
+            onException new FileNotFoundException("not jars in dir and subdir ${dir}")
         }
         return addedFiles5
     }
 
     Collection<File> addAllJarsInDirAndSubdirs(File dir) {
+        if(!dir.exists()){
+            onException new FileNotFoundException(dir.toString())
+        }
         Collection<File> addedFiles5 = []
         addedFiles5.addAll addAllJarsInDirImpl(dir)
-        dir.listFiles().findAll { it.directory }.each {
+        File[] childs = dir.listFiles()
+        if(childs==null){
+            onException new Exception("Failed list files ${dir}")
+        }
+        childs.findAll { it.directory }.each {
             addedFiles5.addAll addAllJarsInDirImpl(it);
         }
         if (addedFiles5.size() == 0) {
-            throw new FileNotFoundException("not jars in dir and subdir ${dir}")
+            onException new FileNotFoundException("not jars in dir and subdir ${dir}")
         }
         return addedFiles5
     }
 
-    void addGenericEnteries(Collection collection) {
-        if(collection.isEmpty()){
-            throw new IllegalArgumentException("Empty collection")
+    void addGenericEnteries(Collection collection1) {
+        if(collection1 == null){
+            throw new NullPointerException("object is null")
         }
-        for (Object entry : collection) {
+        if (collection1.isEmpty()) {
+            onException new IllegalArgumentException("Empty collection")
+        }
+        int count3 =-1
+        for (Object entry : collection1) {
+            count3++
             try {
                 addGenericEntery(entry)
             } catch (Throwable e) {
-                logAdder.info "failed add ${entry} ${e}"
-                throw e
+                String entryS;
+                try {
+                    entryS = "${entry}"
+                }catch(Throwable e2){
+                    entryS = entry.getClass().getName()
+                    logAdder.log(java.util.logging.Level.WARNING,"failed on ${entryS}",e2)
+                }
+                logAdder.info "failed add ${count3} ${entryS} ${e}"
+                onException e
             }
         }
     }
@@ -368,9 +460,26 @@ public abstract class AddFilesToClassLoaderCommon {
         addGenericEntery(object)
     }
 
+    void addClassPathFromURLClassLoader(URLClassLoader urlClassLoader){
+        List<File> files3 = UrlCLassLoaderUtils.getFilesFromUrlClassloader2(urlClassLoader)
+        if(files3.size()==0){
+            onException new Exception("no files in ${urlClassLoader}")
+        }
+        files3.each {
+            if(it.exists()){
+                addF(it)
+            }else{
+                logAdder.info "file not found : ${it}"
+            }
+        }
+    }
 
     void addAllWithDeps(Collection<? extends MavenIdContains> mavenIds) {
         mavenIds.each { addMWithDependeciesDownload(it) }
+    }
+
+    void addArray(Object[] objects) {
+        addAll(objects.toList())
     }
 
     void addAll(Collection objects) {
@@ -378,47 +487,78 @@ public abstract class AddFilesToClassLoaderCommon {
     }
 
     void addGenericEntery(Object object) {
-        switch (object) {
-            case { object == null }:
-                throw new NullPointerException("object is null")
-            case { object instanceof Collection }:
-                throw new IllegalArgumentException("Collection : ${object}")
-            case { object instanceof MavenId }:
-                MavenId mavenId1 = (MavenId) object;
-                addM(mavenId1);
-                break;
-            case { object instanceof File }:
-                File file = object as File
-                addF(file)
-                break;
-            case { object instanceof MavenPath }:
-                MavenPath file = object as MavenPath
-                addMavenPath(file)
-                break;
-            case { object instanceof URL }:
-                URL file = object as URL
-                addUrl(file)
-                break;
-            case { object instanceof BinaryWithSourceI }:
-                BinaryWithSourceI file = object as BinaryWithSourceI
-                addBinaryWithSource(file)
-                break;
-            case { object instanceof MavenIdContains }:
-                MavenIdContains mavenId3 = object as MavenIdContains
-                addGenericEntery mavenId3.getM()
-                break;
-            case { object instanceof ToFileRefSelf }:
-                ToFileRefSelf toFileRefSelf = object as ToFileRefSelf
-                addF toFileRefSelf.resolveToFile()
-                break;
-            default:
-                CustomObjectHandler customObjectHandler = MavenDefaultSettings.mavenDefaultSettings.customObjectHandler
-                if (customObjectHandler == null) {
-                    throw new IllegalArgumentException("${object}");
-                } else {
-                    customObjectHandler.add(this, object)
-                }
+        try {
+            switch (object) {
+                case { object == null }:
+                    throw new NullPointerException("object is null")
+                case { object instanceof Collection }:
+                    throw new IllegalArgumentException("Collection : ${object}")
+                case { object instanceof MavenId }:
+                    MavenId mavenId1 = (MavenId) object;
+                    addM(mavenId1);
+                    break;
+                case { object instanceof MavenIdAndRepoContains }:
+                    MavenIdAndRepoContains mavenId1 = (MavenIdAndRepoContains) object;
+                    addM(mavenId1);
+                    break;
+                case { object instanceof File }:
+                    File file = object as File
+                    if (file.isFile() && file.getName().endsWith('.groovy')) {
+                        throw new Exception("File ends with groovy ${file}")
+                    }
+                    addF(file)
+                    break;
+                case { object instanceof MavenPath }:
+                    MavenPath file = object as MavenPath
+                    addMavenPath(file)
+                    break;
+                case { object instanceof URL }:
+                    URL file = object as URL
+                    addUrl(file)
+                    break;
+                case { object instanceof BinaryWithSourceI }:
+                    BinaryWithSourceI file = object as BinaryWithSourceI
+                    addBinaryWithSource(file)
+                    break;
+                case { object instanceof MavenIdContains }:
+                    MavenIdContains mavenId3 = object as MavenIdContains
+                    addGenericEntery mavenId3.getM()
+                    break;
+                case { object instanceof ToFileRefSelf }:
+                    ToFileRefSelf toFileRefSelf = object as ToFileRefSelf
+                    addF toFileRefSelf.resolveToFile()
+                    break;
+                case{ object.getClass().isArray()}:
+                    throw new IllegalArgumentException("Object is array ${Array.getClass()}")
+                    break
+                default:
+                    CustomObjectHandler customObjectHandler = MavenDefaultSettings.mavenDefaultSettings.customObjectHandler
+                    if (customObjectHandler == null) {
+                        String string1
+                        try {
+                            string1 = object.toString()
+                        }catch (Throwable e){
+                            String name1 = object.getClass().getName()
+                            logAdder.log(java.util.logging.Level.WARNING,"failed to string ${name1}",e)
+                            throw new IllegalArgumentException("${name1}");
+                        }
+                        throw new IllegalArgumentException("${string1}");
+                    } else {
+                        customObjectHandler.add(this, object)
+                    }
+            }
+        }catch(Throwable e){
+            onException(e);
         }
+    }
+
+    void onException(Throwable e){
+        if(onExceptionAction==null){
+            throw e;
+        }else{
+            onExceptionAction.newValue(e)
+        }
+
     }
 
 
@@ -426,13 +566,13 @@ public abstract class AddFilesToClassLoaderCommon {
         File location = UrlCLassLoaderUtils.getClassLocation(aClass)
 //        logAdder.info "detected location : ${location} , for class ${aClass.name}"
         if (location == null) {
-            throw new Exception("Failed detect location for class ${aClass}")
+            onException new Exception("Failed detect location for class ${aClass}")
         }
         if (location.path.length() < 2) {
-            throw new Exception("Strange location ${location.path} for class ${aClass}")
+            onException new Exception("Strange location ${location.path} for class ${aClass}")
         }
         if (!location.exists()) {
-            throw new Exception("Location ${location.path} not exists for class ${aClass}")
+            onException new Exception("Location ${location.path} not exists for class ${aClass}")
         }
 
         addF(location)
@@ -445,7 +585,6 @@ public abstract class AddFilesToClassLoaderCommon {
         other.mavenCommonUtils = mavenCommonUtils
         Thread.dumpStack()
     }
-
 
 
 }
