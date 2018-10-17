@@ -3,7 +3,7 @@ package net.sf.jremoterun.utilities.groovystarter.seqpattern
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
 import net.sf.jremoterun.utilities.classpath.ClRef
-import net.sf.jremoterun.utilities.classpath.ClassNameReference
+
 import net.sf.jremoterun.utilities.groovystarter.runners.RunnableClassName
 
 import java.util.concurrent.ConcurrentHashMap
