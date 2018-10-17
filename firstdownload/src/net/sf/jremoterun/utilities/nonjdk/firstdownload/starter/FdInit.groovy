@@ -1,4 +1,4 @@
-package net.sf.jremoterun.utilities.nonjdk.firstdownload
+package net.sf.jremoterun.utilities.nonjdk.firstdownload.starter
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
@@ -7,7 +7,8 @@ import net.sf.jremoterun.utilities.groovystarter.GroovyRunnerConfigurator2
 import net.sf.jremoterun.utilities.groovystarter.ShortcutSelector
 import net.sf.jremoterun.utilities.groovystarter.runners.RunnableFactory
 import net.sf.jremoterun.utilities.groovystarter.st.JrrRunnerPhase2
-import net.sf.jremoterun.utilities.nonjdk.firstdownload.specclassloader.FirstDownloadSettings
+import net.sf.jremoterun.utilities.nonjdk.firstdownload.starter.settings.FdClassPath
+import net.sf.jremoterun.utilities.nonjdk.firstdownload.starter.settings.SomeClassRefs
 
 import java.util.logging.Logger
 
@@ -15,8 +16,6 @@ import java.util.logging.Logger
 class FdInit extends GroovyRunnerConfigurator2 {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
-
-//    ClassNameReference classNameReference = new ClassNameReference('net.sf.jremoterun.utilities.nonjdk.firstdownload.specclassloader.BeforeClassRun')
 
     @Override
     void doConfig() {
@@ -31,23 +30,23 @@ class FdInit extends GroovyRunnerConfigurator2 {
 
     void initDirs() {
         gmrp.addFilesToClassLoader.isLogFileAlreadyAdded = false
-        MavenDefaultSettings.mavenDefaultSettings.grapeLocalDir.mkdir();
-        MavenDefaultSettings.mavenDefaultSettings.grapeLocalDir.mkdirs();
+        MavenDefaultSettings.mavenDefaultSettings.grapeFileFinder.getMavenLocalDir2().mkdir();
+        MavenDefaultSettings.mavenDefaultSettings.grapeFileFinder.getMavenLocalDir2().mkdirs();
     }
 
     void addGitClassPath() {
         gmrp.addFilesToClassLoader.addGenericEnteries FdClassPath.mavenIds
-        RunnableFactory.runRunner FirstDownloadSettings.A.GitRepoDownloader
+        RunnableFactory.runRunner SomeClassRefs.GitRepoDownloader
         Map m = ['selfUpdate': this.&doSeftUpdate]
         boolean actionSelected = ShortcutSelector.runAction2(m)
         if (actionSelected) {
         } else {
-            RunnableFactory.runRunner FirstDownloadSettings.A.ifFrameWoekAdder
+            RunnableFactory.runRunner SomeClassRefs.ifFrameworkAdder
         }
     }
 
     boolean doSeftUpdate() {
-        gmrp.args[0] = FirstDownloadSettings.A.selfUpdateRef.clRef.className
+        gmrp.args[0] = SomeClassRefs.selfUpdateRef.clRef.className
     }
 
 

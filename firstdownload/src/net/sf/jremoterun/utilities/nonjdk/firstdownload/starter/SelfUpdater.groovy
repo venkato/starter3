@@ -1,11 +1,10 @@
-package net.sf.jremoterun.utilities.nonjdk.firstdownload
+package net.sf.jremoterun.utilities.nonjdk.firstdownload.starter
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
 import net.sf.jremoterun.utilities.groovystarter.GroovyMethodRunnerParams
 import net.sf.jremoterun.utilities.init.utils.CopyFileUtil
-import net.sf.jremoterun.utilities.nonjdk.firstdownload.specclassloader.CloneGitRepo
-import net.sf.jremoterun.utilities.nonjdk.firstdownload.specclassloader.FirstDownloadSettings
+import net.sf.jremoterun.utilities.nonjdk.firstdownload.starter.settings.FirstDownloadSettings
 import org.apache.commons.io.FileUtils
 
 import java.util.logging.Logger
