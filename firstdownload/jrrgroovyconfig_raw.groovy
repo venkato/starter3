@@ -7,7 +7,7 @@ import net.sf.jremoterun.utilities.groovystarter.*
 class FirstDownloadConfig extends GroovyRunnerConfigurator2 {
 
 
-    public static ClRef initClass = new ClRef('net.sf.jremoterun.utilities.nonjdk.firstdownload.FdInit')
+    public static ClRef initClass = new ClRef('net.sf.jremoterun.utilities.nonjdk.firstdownload.starter.FdInit')
 
     public static Runnable customRunner = {createRunnerFromClass(initClass).run() }
 

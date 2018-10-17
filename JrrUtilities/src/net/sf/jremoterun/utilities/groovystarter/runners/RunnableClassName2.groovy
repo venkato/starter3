@@ -2,8 +2,6 @@ package net.sf.jremoterun.utilities.groovystarter.runners
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.classpath.ClassNameReference
-import net.sf.jremoterun.utilities.groovystarter.GroovyRunnerConfigurator2
 import net.sf.jremoterun.utilities.groovystarter.LoadScriptFromFileUtils
 
 import java.util.logging.Logger

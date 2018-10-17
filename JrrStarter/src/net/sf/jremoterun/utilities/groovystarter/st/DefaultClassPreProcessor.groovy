@@ -46,6 +46,9 @@ class DefaultClassPreProcessor implements ClassPreProcessor {
             } else {
                 detectAnnotationsOnMainCLass2(stream.text)
             }
+        }catch (Throwable e){
+            log.log(Level.INFO, "failed parse annotaions for ${className}", e)
+            throw e;
         } finally {
             if (stream != null) {
                 try {

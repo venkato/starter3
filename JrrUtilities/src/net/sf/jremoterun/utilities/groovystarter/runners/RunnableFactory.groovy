@@ -2,7 +2,6 @@ package net.sf.jremoterun.utilities.groovystarter.runners
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.classpath.ClRef
 
 import java.util.logging.Logger
@@ -14,6 +13,11 @@ class RunnableFactory {
 
     public static ClassLoader thisClassLoader = JrrClassUtils.currentClassLoader
     public static GroovyClassLoader groovyClassLoader
+
+    static GroovyClassLoader receiveGroovyClassLoader2() {
+        receiveGroovyClassLoader()
+        return groovyClassLoader
+    }
 
     static void receiveGroovyClassLoader() {
         if (groovyClassLoader == null) {
@@ -27,13 +31,12 @@ class RunnableFactory {
 
 
     static Runnable createRunner(File file) {
-        receiveGroovyClassLoader()
-        return createRunnerFromFile2(file, groovyClassLoader)
+        return createRunnerFromFile2(file, receiveGroovyClassLoader2())
     }
 
     static Runnable createRunnerFromFile2(File file, GroovyClassLoader groovyClassLoader) {
-        JrrUtilities3.checkFileExist(file)
-        if (!file.file) {
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
+        if (!file.isFile()) {
             throw new IllegalArgumentException("Not a file : ${file}")
         }
         Runnable r = new RunnableFile(file, groovyClassLoader)
@@ -70,6 +73,12 @@ class RunnableFactory {
 
 
 
+    static void runRunner(File file) {
+        assert file.exists()
+        Runnable runner = createRunner(file)
+        runner.run()
+    }
+
     static void runRunner(Class clazz) {
         assert clazz != null
         Runnable r = new RunnableClassName2(clazz)
@@ -83,8 +92,10 @@ class RunnableFactory {
     }
 
     static void runRunner(ClRefRef className) {
-//        runRunner2(className.clRef)
-        createRunnerFromClass(className.getClRef(), thisClassLoader).run()
+        if(className==null){
+            throw new NullPointerException('class name is null')
+        }
+         createRunnerFromClass(className.getClRef(), thisClassLoader).run()
     }
 
 //    static void runRunner2(ClRef className) {
