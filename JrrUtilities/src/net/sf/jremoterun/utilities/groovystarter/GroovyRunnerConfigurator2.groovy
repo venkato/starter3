@@ -35,7 +35,7 @@ abstract class GroovyRunnerConfigurator2 extends Script {
 
     static String getFirstParam2(Map shortcutsDescription) {
         String firstParam3 = getFirstParam()
-        if (firstParam3 == ConsoleSymbols.question) {
+        if (firstParam3 == ConsoleSymbols.question.s) {
             String msg = shortcutsDescription.collect { "${it.key} : ${it.value}" }.join('\n')
             StackTraceElement[] trace = new Exception().getStackTrace()
             StackTraceElement find = trace.find { it.className != GroovyRunnerConfigurator2.name }
@@ -49,7 +49,7 @@ ${msg}"""
 
     static String getFirstParam2(String shortcutsDescription) {
         String firstParam3 = getFirstParam()
-        if (firstParam3 == ConsoleSymbols.question) {
+        if (firstParam3 == ConsoleSymbols.question.s) {
             StackTraceElement[] trace = new Exception().getStackTrace()
             StackTraceElement find = trace.find { it.className != GroovyRunnerConfigurator2.name }
             System.out.println """${find} : 
@@ -68,7 +68,7 @@ ${shortcutsDescription}"""
     @Deprecated
     static Runnable createRunnerFromFile(File file) {
         return RunnableFactory.createRunner(file)
-//        JrrUtilities3.checkFileExist(file)
+//        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
 //        if (!file.file) {
 //            throw new IllegalArgumentException("Not a file : ${file}")
 //        }

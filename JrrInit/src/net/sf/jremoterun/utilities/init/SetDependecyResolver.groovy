@@ -16,7 +16,7 @@ class SetDependecyResolver extends GroovyRunnerConfigurator2 {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
-    public static ClRef cnr = new ClRef('net.sf.jremoterun.utilities.init.SetGrape')
+    public static ClRef cnr = new ClRef('net.sf.jremoterun.utilities.init.SetGrapeWrapper')
 
     @Override
     void doConfig() {
@@ -25,7 +25,9 @@ class SetDependecyResolver extends GroovyRunnerConfigurator2 {
 
 
     void f2() {
-        if (IvyDepResolver2.setDepResolver()) {
+        boolean b =IvyDepResolver2.setDepResolver()
+        //b = true
+        if (b) {
             f3()
         } else {
             DropshipClasspath.downloadyIvydepToIvyDir()
