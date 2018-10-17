@@ -2,7 +2,6 @@ package net.sf.jremoterun.utilities.classpath
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.groovystarter.GroovyMethodRunnerParams
 import org.codehaus.groovy.runtime.MethodClosure
 
@@ -12,9 +11,9 @@ import java.util.logging.Logger
 public class ClassPathCalculatorWithAdder extends ClassPathCalculatorAbstract {
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass()
 
-	static MethodClosure addBinaryWithSource = (MethodClosure)AddFilesToClassLoaderGroovy.&addBinaryWithSource
+	static MethodClosure addBinaryWithSource = (MethodClosure)(Closure)AddFilesToClassLoaderGroovy.&addBinaryWithSource
 
-	static MethodClosure addMavenPath = (MethodClosure)AddFilesToClassLoaderGroovy.&addMavenPath
+	static MethodClosure addMavenPath = (MethodClosure)(Closure)AddFilesToClassLoaderGroovy.&addMavenPath
 
 	List javaSources = []
 
@@ -38,6 +37,7 @@ public class ClassPathCalculatorWithAdder extends ClassPathCalculatorAbstract {
 	protected void addElement2(Object obj) {
 		filesAndMavenIds.add(obj)
 	}
+
 
 
 }

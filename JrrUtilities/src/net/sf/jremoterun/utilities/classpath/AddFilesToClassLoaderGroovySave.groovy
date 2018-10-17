@@ -2,6 +2,7 @@ package net.sf.jremoterun.utilities.classpath
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
+import net.sf.jremoterun.utilities.JrrUtilitiesFile
 
 import java.util.logging.Logger
 
@@ -49,22 +50,35 @@ abstract class AddFilesToClassLoaderGroovySave extends AddFilesToClassLoaderGroo
 
     @Override
     void addGenericEntery(Object object) {
+        checkForBadObject(object)
         if (object instanceof File) {
             File  f= (File) object;
-            assert f.exists()
-        }
-        if( object instanceof Collection ) {
-            throw new IllegalArgumentException("Collection : ${object}")
+            if(!f.exists()){
+                onException new FileNotFoundException(f.getAbsolutePath())
+            }
         }
         addElement(object)
     }
 
     @Override
     void addSourceGenericAll(List objects) {
-        objects.each {addSourceGeneric(it)}
+        int count3 =-1
+        objects.each {
+            try {
+                addSourceGeneric(it)
+            } catch (Throwable e) {
+                logAdder.info "failed add ${count3} ${it} ${e}"
+                onException e
+            }
+        }
     }
 
+    public boolean checkSourceExists = true
+
     void addSourceF(File source) throws Exception{
+        if(checkSourceExists){
+            JrrUtilitiesFile.checkFileExist(source)
+        }
         getSourceElements().add(source);
     }
 
@@ -83,5 +97,11 @@ abstract class AddFilesToClassLoaderGroovySave extends AddFilesToClassLoaderGroo
     @Override
     void addSourceS(String source) throws Exception {
         getSourceElements().add(source);
+    }
+
+    // TODO refactor, return null not nice
+    File addSourceMNoExceptionOnMissing(MavenId mavenId){
+        getSourceElements().add(mavenId);
+        return null
     }
 }

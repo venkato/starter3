@@ -27,8 +27,8 @@ class ShortcutSelector {
 
     void printHelp() {
         StackTraceElement[] trace = new Exception().getStackTrace()
-        StackTraceElement find = trace.find { it.className != ShortcutSelector.name }
-        System.out.println """${find} - available ${shortcuts.size()} shortcuts:
+        StackTraceElement stackTraceElement = trace.find { it.className != ShortcutSelector.name }
+        System.out.println """${stackTraceElement} - available ${shortcuts.size()} shortcuts:
 ${msgHelp}"""
 //        log.info "\n${msg}"
     }
@@ -37,7 +37,7 @@ ${msgHelp}"""
 
     String getInfo(Object key, Object value) {
         if (key == null) {
-            throw new NullPointerException("key is null for key ${value}")
+            throw new NullPointerException("key is null for value ${value}")
         }
         if (value == null) {
             throw new NullPointerException("value is null for key ${key}")
@@ -66,7 +66,7 @@ ${msgHelp}"""
 
     String convertValueToHuman(Object value) {
         if (value instanceof ClRefRef) {
-            return value.getClRef().getClassName()
+            return value.getClRef().className
         }
         if (value instanceof Class) {
             return value.getName()
@@ -74,12 +74,13 @@ ${msgHelp}"""
         if (value instanceof MethodClosure) {
             return value.getMethod()
         }
-        throw new IllegalArgumentException("${value}")
+//        throw new IllegalArgumentException("${value}")
+        return "${value}"
     }
 
     void runAction(Object value) {
         if (value instanceof ClRefRef) {
-            value = value.clRef.loadClass2()
+            value = value.getClRef().loadClass2()
 //            RunnableFactory.runRunner value
 //            return
         }
@@ -87,7 +88,7 @@ ${msgHelp}"""
         if (value instanceof Class) {
             Class clazz23 =ClassNameSynonym
             if(clazz23.isAssignableFrom(value)){
-                GroovyMethodRunnerParams.gmrp.args.add(0,value.name)
+                GroovyMethodRunnerParams.gmrpn.args.add(0,value.name)
             }else {
                 LoadScriptFromFileUtils.runNoParams(value.newInstance(),null)
             }
@@ -95,6 +96,14 @@ ${msgHelp}"""
         }
         if (value instanceof MethodClosure) {
             value.call()
+            return
+        }
+        if (value instanceof Runnable) {
+            value.run();
+            return
+        }
+        if (value instanceof Script) {
+            value.run();
             return
         }
         throw new IllegalArgumentException("${value}")
@@ -141,7 +150,7 @@ ${msgHelp}"""
     static boolean runActionRemoveFirstParam(Map params) {
         boolean actionSeleted = runAction2(params)
         if (actionSeleted) {
-            GroovyRunnerConfigurator2.removeFirstParam()
+            GroovyRunnerConfigurator22.removeFirstParam()
         }
         return actionSeleted
     }
@@ -159,7 +168,7 @@ ${msgHelp}"""
      */
     boolean runActionRemoveFirstParam3() {
         ShortcutSelector ss = this
-        String firstParam = GroovyRunnerConfigurator2.getFirstParam()
+        String firstParam = GroovyRunnerConfigurator22.getFirstParam()
         if (firstParam == ConsoleSymbols.question.s) {
             ss.printHelp()
             return false
@@ -168,7 +177,7 @@ ${msgHelp}"""
         if (action == null) {
             return false
         }
-        GroovyRunnerConfigurator2.removeFirstParam()
+        GroovyRunnerConfigurator22.removeFirstParam()
         ss.runAction(action)
         return true
     }
@@ -180,7 +189,7 @@ ${msgHelp}"""
     }
 
     boolean runAction() {
-        String firstParam = GroovyRunnerConfigurator2.getFirstParam()
+        String firstParam = GroovyRunnerConfigurator22.getFirstParam()
         if (firstParam == ConsoleSymbols.question.s) {
             printHelp()
             return false

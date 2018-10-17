@@ -2,27 +2,29 @@ package net.sf.jremoterun.utilities.groovystarter
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.JrrUtils
+import net.sf.jremoterun.utilities.JavaStackTraceFilter
 import net.sf.jremoterun.utilities.JrrClassUtils
 import net.sf.jremoterun.utilities.NewValueListener
 
 import java.util.logging.Logger
 
 @CompileStatic
-public class PrintExceptionListener implements NewValueListener<Throwable> {
+public class PrintExceptionListener  extends JavaStackTraceFilter implements NewValueListener<Throwable> {
 
-    private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
-    public static boolean printFullStackTrace = false;
+    //private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
+    PrintExceptionListener() {
+    }
 
     @Override
     public void newValue(Throwable t) {
         genericStuff(t)
-        System.exit(1)
+        SystemExit.exit(1)
     }
 
     public static flushOutFile() {
-        if (GroovyMethodRunnerParams.instance.fileOut != null) {
+        if (GroovyMethodRunnerParams.gmrpn.fileOut != null) {
             try {
-                GroovyMethodRunnerParams.instance.fileOut.flush()
+                GroovyMethodRunnerParams.gmrpn.fileOut.flush()
             } catch (Throwable e2) {
             }
         }
@@ -30,37 +32,24 @@ public class PrintExceptionListener implements NewValueListener<Throwable> {
 
     public static String dumpPhase() {
         StringBuilder sb2 = new StringBuilder()
-        if (GroovyMethodRunnerParams.instance.groovyMethodRunner != null) {
+        if (GroovyMethodRunnerParams.gmrpn.groovyMethodRunner != null) {
             sb2.append("At phase : ")
-            sb2.append(GroovyMethodRunnerParams.instance.seqPatternRunnerGmrp.jrrRunnerPhase)
+            sb2.append(GroovyMethodRunnerParams.gmrpn.seqPatternRunnerGmrp.currentPhaseEnhanced)
+            sb2.append(" ")
+            sb2.append(GroovyMethodRunnerParams.gmrpn.seqPatternRunnerGmrp.phaseState)
             sb2.append("\n")
         }
         return sb2.toString()
 
     }
 
-
+    @Override
+    void printBefore(StringBuilder sb2) {
+        sb2.append(dumpPhase())
+    }
 
     void genericStuff(Throwable t) {
-        t = JrrUtils.getRootException(t)
-        StringBuilder sb2 = new StringBuilder()
-        sb2.append(dumpPhase())
-        sb2.append(t);
-        Throwable cause = t.getCause()
-        if (cause != null) {
-            sb2.append('\n nested exception: ')
-            sb2.append(cause)
-        }
-        sb2.append('\n');
-
-        if(printFullStackTrace){
-            StringWriter sw3 = new StringWriter()
-            PrintWriter printWriter = new PrintWriter(sw3);
-            t.printStackTrace(printWriter);
-            sb2.append(sw3)
-        }else {
-            sb2.append(JrrClassUtils.printExceptionWithoutIgnoreClasses2(t).toString())
-        }
+        StringBuilder sb2 = genericStuff3(t)
         System.err.println(sb2)
         flushOutFile()
     }

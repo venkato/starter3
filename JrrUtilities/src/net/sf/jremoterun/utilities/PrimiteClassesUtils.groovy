@@ -63,19 +63,21 @@ public class PrimiteClassesUtils {
 
     public static Class loadPrimitiveClass(final String className) {
         int i = PrimiteClassesUtils.primitiveClassesNames.indexOf(className);
-        if (i == -1) {
-            i = PrimiteClassesUtils.primitiveClassesShortName
-                    .indexOf(className);
+        if (i != -1) {
+            return PrimiteClassesUtils.primitiveClasses.get(i);
         }
-        if (i == -1) {
-            i = PrimiteClassesUtils.primitiveClassesArraysShortName
-                    .indexOf(className);
+        i = PrimiteClassesUtils.primitiveClassesShortName
+                .indexOf(className);
+        if (i != -1) {
+            return PrimiteClassesUtils.primitiveClasses.get(i);
+        }
+
+        i = PrimiteClassesUtils.primitiveClassesArraysShortName
+                .indexOf(className);
+        if (i != -1) {
             return PrimiteClassesUtils.primitiveArraysClasses.get(i);
         }
-        if (i == -1) {
-            return null;
-        }
-        return PrimiteClassesUtils.primitiveClasses.get(i);
+        return null;
 
     }
 

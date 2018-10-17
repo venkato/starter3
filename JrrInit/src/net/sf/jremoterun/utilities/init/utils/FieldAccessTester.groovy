@@ -20,8 +20,8 @@ class FieldAccessTester extends Script {
 
     static void fieldAccess() {
         URLClassLoader cl = new URLClassLoader(new URL[0], FieldAccessTester.classLoader)
-        Object pdcache = cl.@pdcache
-        pdcache.toString()
+//        Object pdcache = cl.@pdcache
+//        pdcache.toString()
     }
 
     static void smartCast() {
@@ -33,16 +33,16 @@ class FieldAccessTester extends Script {
     static void isChildFile2() {
         File parent = new File("/a1")
         File child = new File("/a1/b")
-        assert parent.isChildFile(child)
+//        assert parent.isChildFile(child)
     }
 
     static void child() {
         File parent = new File("/a1")
-        File child = parent.child("b")
-        child.toString()
+//        File child = parent.child("b")
+//        child.toString()
     }
 
     static void logTester(){
-        log.debug("some msg")
+       // log.debug("some msg")
     }
 }

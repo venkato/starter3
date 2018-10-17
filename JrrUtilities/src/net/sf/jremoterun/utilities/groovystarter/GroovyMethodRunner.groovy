@@ -1,10 +1,11 @@
 package net.sf.jremoterun.utilities.groovystarter
 
 import groovy.transform.CompileStatic
-import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.classpath.AddFilesToUrlClassLoaderGroovy
-import net.sf.jremoterun.utilities.classpath.JrrGroovyScriptRunner
+import net.sf.jremoterun.utilities.groovystarter.runners.GroovyClassLoaderDefault
+import net.sf.jremoterun.utilities.groovystarter.runners.GroovyConfigLoaderGeneric
+import net.sf.jremoterun.utilities.groovystarter.runners.RunnableFactory
+import net.sf.jremoterun.utilities.groovystarter.runners.RunnableFile
 
 import java.util.logging.Logger
 
@@ -13,12 +14,11 @@ public class GroovyMethodRunner {
 
     private static final Logger log = Logger.getLogger(GroovyMethodRunner.getName());
 
-    volatile GroovyMethodRunnerParams gmrp = GroovyMethodRunnerParams.getInstance()
+    public GroovyMethodRunnerParams gmrp
 
-    public static JrrGroovyScriptRunner groovyScriptRunner = new JrrGroovyScriptRunner();
-
-//    public JrrRunnerPhaseI jrrRunnerPhase = JrrRunnerPhase.begin;
-
+    GroovyMethodRunner(GroovyMethodRunnerParams gmrp) {
+        this.gmrp = gmrp
+    }
 
     void systemExit(String msgs) {
         println msgs
@@ -28,13 +28,6 @@ public class GroovyMethodRunner {
             runRunner(gmrp.onStartupError);
         }
     }
-
-
-//    void jrrRunScript2(Script initialScript) {
-//        String[] args = (String[]) initialScript.binding.getVariable('args')
-//        assert args != null
-//        jrrRunScript(initialScript, args);
-//    }
 
     /**
      * This method is called
@@ -73,7 +66,7 @@ public class GroovyMethodRunner {
         if (gmrp.showExceptionInSwingWindowV) {
             throw new Exception("wrong arguments")
         } else {
-            System.exit 1
+            SystemExit.exit 1
         }
 
     }
@@ -84,11 +77,15 @@ public class GroovyMethodRunner {
         gmrp.starterScript = initialScript
         gmrp.setPhaseChanger(JrrRunnerPhase.selfCheck, this.&selfCheck)
         gmrp.setPhaseChanger(JrrRunnerPhase.userConfigLoaded, this.&loadUserConfig)
-        gmrp.setPhaseChanger(JrrRunnerPhase.directoryConfigLoaded, this.&loadDirConfig)
+        gmrp.setPhaseChanger(JrrRunnerPhase.userConfigWinLoaded, this.&loadUserConfigShared)
+        gmrp.setPhaseChanger(JrrRunnerPhase.userConfig2Loaded, this.&loadUserConfig2)
         gmrp.setPhaseChanger(JrrRunnerPhase.hostConfigLinuxLoaded, this.&loadHostLinuxConfig)
         gmrp.setPhaseChanger(JrrRunnerPhase.hostConfigWindowsLoaded, this.&loadHostWindowConfig)
+        gmrp.setPhaseChanger(JrrRunnerPhase.directoryConfigLoaded, this.&loadDirConfig)
+        gmrp.setPhaseChanger(JrrRunnerPhase.grHomeDirectoryConfigLoaded, this.&grHomeDirectoryConfigLoaded)
         gmrp.setPhaseChanger(JrrRunnerPhase.createGroovyClassLoader, this.&createGroovyClassLoader)
         gmrp.setPhaseChanger(JrrRunnerPhase.createClassLoaderAdder, this.&createClassLoaderAdder)
+        gmrp.setPhaseChanger(JrrRunnerPhase.userConfig2ClassesAdd, this.&loadUserConfig2ClassesAdd)
     }
 
     void loadUserConfig() {
@@ -104,11 +101,55 @@ public class GroovyMethodRunner {
         }
     }
 
+    void grHomeDirectoryConfigLoaded() {
+        if (gmrp.loadGrHomeRawConfig) {
+            File parentFile1 = gmrp.grHome.getParentFile()
+            if (parentFile1 != null) {
+                File grHomeConfigFile1 = new File(parentFile1, JrrStarterConstatnts.rawConfiGrHomeFileName)
+                if (grHomeConfigFile1.exists()) {
+                    loadScriptFromFile(grHomeConfigFile1)
+                }
+            }
+        }
+    }
 
 
     void loadHostLinuxConfig() {
         if (gmrp.groovyHostConfigLinuxRaw != null && gmrp.groovyHostConfigLinuxRaw.exists()) {
             loadScriptFromFile(gmrp.groovyHostConfigLinuxRaw)
+        }
+    }
+
+    void loadUserConfig2ClassesAdd() {
+        if (JrrStarterVariables2.getInstance().classesDir != null) {
+            gmrp.addFilesToClassLoader.add(JrrStarterVariables2.getInstance().classesDir);
+        }
+    }
+
+    void loadUserConfig2() {
+        if (JrrStarterVariables2.getInstance().filesDir != null) {
+            File configRaw = new File(JrrStarterVariables2.getInstance().filesDir, JrrStarterConstatnts.rawConfigFileName)
+            if (configRaw.exists()) {
+                loadScriptFromFile(configRaw);
+            }
+        }
+    }
+
+
+    void loadUserConfigShared() {
+        if (gmrp.loadUserRawWindowsConfigShared) {
+            File homeFromWindows = gmrp.detectHomeFromWindows()
+            if (homeFromWindows != null) {
+                String path1 = homeFromWindows.canonicalFile.absolutePath.replace('\\', '/')
+                String path2 = gmrp.userHome.canonicalFile.absolutePath.replace('\\', '/')
+                if (path1 == path2) {
+                    // otherwise file loaded
+                    File f = new File(homeFromWindows, JrrStarterConstatnts.rawConfigFileName)
+                    if (f.exists()) {
+                        loadScriptFromFile(f)
+                    }
+                }
+            }
         }
     }
 
@@ -134,13 +175,13 @@ public class GroovyMethodRunner {
             URLClassLoader classLoaderUse = findCorrectClassloader()
             gmrp.addFilesToClassLoader = new AddFilesToUrlClassLoaderGroovy(classLoaderUse)
         }
-        if(gmrp.addFilesToClassLoaderClassaderOfGroovy==null) {
-            if (ClassLoader.getSystemClassLoader() == GroovyObject.classLoader) {
+        if (gmrp.addFilesToClassLoaderClassaderOfGroovy == null) {
+            if (ClassLoader.getSystemClassLoader() == GroovyObject.getClassLoader()) {
                 gmrp.addFilesToClassLoaderClassaderOfGroovy = gmrp.addFilesToClassLoaderSystem
-            }else{
+            } else {
                 if (GroovyObject.classLoader instanceof URLClassLoader) {
 //                    URLClassLoader  = (URLClassLoader) GroovyObject.classLoader;
-                    gmrp.addFilesToClassLoaderClassaderOfGroovy =  new AddFilesToUrlClassLoaderGroovy(GroovyObject.classLoader as URLClassLoader)
+                    gmrp.addFilesToClassLoaderClassaderOfGroovy = new AddFilesToUrlClassLoaderGroovy(GroovyObject.getClassLoader() as URLClassLoader)
 
                 }
             }
@@ -148,7 +189,7 @@ public class GroovyMethodRunner {
     }
 
     void createGroovyClassLoader() {
-        gmrp.groovyClassLoader = (GroovyClassLoader) gmrp.starterScript.class.classLoader
+        gmrp.groovyClassLoader = (GroovyClassLoader) gmrp.starterScript.getClass().getClassLoader()
         Thread.currentThread().setContextClassLoader(gmrp.groovyClassLoader);
     }
 
@@ -168,22 +209,27 @@ public class GroovyMethodRunner {
         return classLoaderUse
     }
 
-    Object loadScriptFromFile(File file) {
+    public static boolean doClassLoaderCheck= true
+
+    /**
+     * to be used by frameworkOnly
+     */
+    void loadScriptFromFile(File file) {
         if (gmrp.groovyClassLoader == null) {
             throw new IllegalStateException("gmrp.groovyClassLoader not set")
         }
-        return LoadScriptFromFileUtils.loadScriptFromFile(file,gmrp.groovyClassLoader )
-//        JrrUtilities3.checkFileExist(file)
-//        file = file.absoluteFile.canonicalFile
-//        Class clazz = gmrp.groovyClassLoader.parseClass(file)
-//        assert clazz != null
-//        Object instance = clazz.newInstance();
-//        return JrrClassUtils.invokeJavaMethod(instance, 'run')
+        if(doClassLoaderCheck) {
+            if(! gmrp.groovyClassLoader.is(GroovyClassLoaderDefault.receiveGroovyClassLoader2())){
+                Class clazz1 = gmrp.groovyClassLoader.loadClass(net.sf.jremoterun.utilities.groovystarter.runners.GroovyClassLoaderDefault.getName())
+                assert net.sf.jremoterun.utilities.groovystarter.runners.GroovyClassLoaderDefault.is(clazz1)
+            }
+        }
+        assert file.exists()
+        RunnableFile runner = RunnableFactory.createRunner(file)
+        runner.callerInfo = this
+        runner.run()
     }
 
-//    static void runRunners(List<Runnable> runable) {
-//        runable.each { it.run() }
-//    }
 
     @Deprecated
     static void runRunner(Runnable runable) {

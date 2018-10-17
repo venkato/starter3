@@ -3,7 +3,6 @@ package net.sf.jremoterun.utilities.classpath
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.FileInputStream2
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.UrlCLassLoaderUtils
 
 import java.util.logging.Level
@@ -135,6 +134,7 @@ class ClassPathCalculatorAbstract {
     }
 
 
+    @Deprecated
     void addClassPathFromURLClassLoader(URLClassLoader urlClassLoader) {
         List<File> collect = UrlCLassLoaderUtils.getFilesFromUrlClassloader(urlClassLoader)
         collect.each {
@@ -178,11 +178,14 @@ class ClassPathCalculatorAbstract {
         }
         if (obj instanceof MavenIdContains) {
             MavenIdContains m = (MavenIdContains) obj;
-            return m.getM();
+            return transformMavenIdContains(m)
         }
         return obj
     }
 
+    Object transformMavenIdContains(MavenIdContains  mavenIdContains){
+        return mavenIdContains.getM();
+    }
 
     void calcAndAddClassesToAdded(AddFilesToClassLoaderCommon adder) {
         calcClassPathFromFiles12()
@@ -229,24 +232,29 @@ class ClassPathCalculatorAbstract {
         filesAndMavenIds.each {
             if (it instanceof MavenId) {
                 MavenId mavenId = (MavenId) it;
-                if (mavenId.version == mavenCommonUtils.lastVersionInd) {
-                    mavenId = mavenCommonUtils.findLatestMavenOrGradleVersionEx(mavenId)
-                }
-                String prefixNoversion = mavenId.groupId + ':' + mavenId.artifactId
-                String savedVersion = savedMavenIds.get(prefixNoversion)
-                if (savedVersion == null) {
-                    int savedPosition = res.size()
-                    savedPositions.put(prefixNoversion, savedPosition)
-                    savedMavenIds.put(prefixNoversion, mavenId.version)
-                    res.add(mavenId)
-                } else if (MavenDefaultSettings.mavenDefaultSettings.mavenVersionComparator.isOverrideMavenId2(mavenId, savedVersion, mavenId.version)) {
-                    int savedPosition = savedPositions.get(prefixNoversion)
-                    savedMavenIds.put(prefixNoversion, mavenId.version)
-                    res.set(savedPosition, mavenId)
-                    log.info "overriding ${prefixNoversion} from ${savedVersion} to ${mavenId.version} , position ${savedPosition}"
-                } else {
-                    int savedPosition = savedPositions.get(prefixNoversion)
-                    log.info "skip ${prefixNoversion}  ${mavenId.version} as has newer ${savedVersion} , position ${savedPosition}"
+                try {
+                    if (mavenId.version == mavenCommonUtils.lastVersionInd) {
+                        mavenId = mavenCommonUtils.findLatestMavenOrGradleVersionEx(mavenId)
+                    }
+                    String prefixNoversion = mavenId.groupId + ':' + mavenId.artifactId
+                    String savedVersion = savedMavenIds.get(prefixNoversion)
+                    if (savedVersion == null) {
+                        int savedPosition = res.size()
+                        savedPositions.put(prefixNoversion, savedPosition)
+                        savedMavenIds.put(prefixNoversion, mavenId.version)
+                        res.add(mavenId)
+                    } else if (MavenDefaultSettings.mavenDefaultSettings.mavenVersionComparator.isOverrideMavenId2(mavenId, savedVersion, mavenId.version)) {
+                        int savedPosition = savedPositions.get(prefixNoversion)
+                        savedMavenIds.put(prefixNoversion, mavenId.version)
+                        res.set(savedPosition, mavenId)
+                        log.info "overriding ${prefixNoversion} from ${savedVersion} to ${mavenId.version} , position ${savedPosition}"
+                    } else {
+                        int savedPosition = savedPositions.get(prefixNoversion)
+                        log.info "skip ${prefixNoversion}  ${mavenId.version} as has newer ${savedVersion} , position ${savedPosition}"
+                    }
+                }catch (Throwable e){
+                    log.info "failed on ${mavenId}"
+                    throw e
                 }
             } else {
                 res.add(it)
@@ -376,7 +384,7 @@ class ClassPathCalculatorAbstract {
 
 
     Object convertFileToObject(File file) throws Exception {
-        JrrUtilities3.checkFileExist(file)
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
         file = file.absoluteFile.canonicalFile
         String absPath = file.absoluteFile.canonicalPath.replace('\\', '/')
         if (convertPathToLowerCase) {
