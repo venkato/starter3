@@ -1,9 +1,15 @@
 package net.sf.jremoterun.utilities
 
 import groovy.transform.CompileStatic
+import net.sf.jremoterun.JrrUtils
+
 //import sun.misc.URLClassPath
 
 import java.lang.management.ManagementFactory
+import java.lang.reflect.Field
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
+import java.util.logging.Level
 import java.util.logging.Logger
 ; ;
 
@@ -14,7 +20,19 @@ public class UrlCLassLoaderUtils {
 
 
     static List<File> getFilesFromUrlClassloader(URLClassLoader urlClassLoader) throws Exception {
+        List<File> files = getFilesFromUrlClassloader2(urlClassLoader)
+        if (files.size() == 0) {
+            List<URL> urls = urlClassLoader.getURLs().toList()
+            if (urls.size() != 0) {
+                log.info "failed find files in urlclassloader"
+            }
+            List<File> collect = urls.collect { UrlToFileConverter.c.convert(it) };
+            return collect
+        }
+        return files
+    }
 
+    static List<File> getFilesFromUrlClassloader2(URLClassLoader urlClassLoader) throws Exception {
         //sun.misc.URLClassPath
         Object ucp = JrrClassUtils.getFieldValue(urlClassLoader, "ucp")
         Collection loaders = JrrClassUtils.getFieldValue(ucp, "loaders") as ArrayList;
@@ -24,26 +42,41 @@ public class UrlCLassLoaderUtils {
 
         //log.info("classloader class name ${urlClassLoader.class.name}")
         List<File> collect = urlss.collect { UrlToFileConverter.c.convert(it) };
-
-        collect.addAll((List) loaders.findAll { it.class.name.contains('FileLoader') }.collect {
-            JrrClassUtils.getFieldValue(it, "dir")
-        })
+        List<File> col2 = loaders.findAll { it.class.name.contains('FileLoader') }.collect {
+            (File) JrrClassUtils.getFieldValue(it, "dir")
+        }
+        collect.addAll(col2)
         return collect
     }
 
     static URL getClassLocation3(final Class clazz)
             throws MalformedURLException {
+        if (clazz.equals(Class)) {
+            throw new IllegalArgumentException("Strange class name")
+        }
         final String tailJava = buildClassNameSuffix(clazz.getName());
-        final String tailGroovy = buildClassNameSuffixGroovy(clazz.getName());;
+        final String tailGroovy = buildClassNameSuffixGroovy(clazz.getName()); ;
         String tail = tailJava
 //        log.info "j = ${tailJava}, g = ${tailGroovy}"
+        URL urlRes;
         ClassLoader cl = clazz.getClassLoader()
-        final URL urlRes = cl.getResource(tailJava);
-        if (urlRes == null) {
-            tail = tailGroovy
-            urlRes = cl.getResource(tailGroovy);
+        if (cl == null) {
+            urlRes = clazz.getResource('/' + tailJava)
             if (urlRes == null) {
-                return null;
+                tail = tailGroovy
+                urlRes = clazz.getResource('/' + tailGroovy);
+                if (urlRes == null) {
+                    return null;
+                }
+            }
+        } else {
+            urlRes = cl.getResource(tailJava);
+            if (urlRes == null) {
+                tail = tailGroovy
+                urlRes = cl.getResource(tailGroovy);
+                if (urlRes == null) {
+                    return null;
+                }
             }
         }
         String url = urlRes.toString();
@@ -67,17 +100,17 @@ public class UrlCLassLoaderUtils {
         return convertClassLocationToPathToJar2(location)
     }
 
-    static String buildClassNameSuffix(String className){
+    static String buildClassNameSuffix(String className) {
         final String tail = className.replace('.', '/') + ".class";
         return tail
     }
 
-    static String buildClassNameSuffixGroovy(String className){
+    static String buildClassNameSuffixGroovy(String className) {
         final String tail = className.replace('.', '/') + ".groovy";
         return tail
     }
 
-    static File convertClassLocationToPathToJar(URL urlRes,String className){
+    static File convertClassLocationToPathToJar(URL urlRes, String className) {
         if (urlRes == null) {
             throw new NullPointerException("class location is null for ${className}")
         }
@@ -92,14 +125,13 @@ public class UrlCLassLoaderUtils {
     }
 
 
-
-    static File convertClassLocationToPathToJar2(URL location){
+    static File convertClassLocationToPathToJar2(URL location) {
         if (location == null) {
             throw new NullPointerException("class location is null")
         }
 
         File file = UrlToFileConverter.c.convert location
-        // JrrUtilities3.checkFileExist(file)
+        // net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
         return file
 
     }
@@ -113,7 +145,69 @@ public class UrlCLassLoaderUtils {
     }
 
 
+    public static void addFileToClassLoader(final URLClassLoader classLoader, File file)
+            throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, IOException {
+        if (classLoaderAddUrlMethod == null) {
+            Method classLoaderAddUrlMethod1 = JrrClassUtils.findMethodByParamTypes3(URLClassLoader, "addURL", URL);
+            classLoaderAddUrlMethod1.setAccessible(true);
+            classLoaderAddUrlMethod = classLoaderAddUrlMethod1
+        }
+        file = file.getAbsoluteFile();
+        if (!file.exists()) {
+            throw new FileNotFoundException(file.getAbsolutePath());
+        }
+        classLoaderAddUrlMethod.invoke(classLoader, file.toURI().toURL());
+    }
 
+    public static Method classLoaderAddUrlMethod;
+    public static Method addUrlM;
+    public static Method addUrlMJava11;
+
+    static void addUrlToClassLoaderJava11Aware(ClassLoader cl, File jrrpath) throws Exception {
+        if (!jrrpath.exists()) {
+            throw new FileNotFoundException(jrrpath.getAbsolutePath());
+        }
+        if (cl instanceof URLClassLoader) {
+            if (addUrlM == null) {
+                addUrlM = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                addUrlM.setAccessible(true);
+            }
+            addUrlM.invoke(cl, jrrpath.toURL());
+        } else {
+            if (java11Used) {
+                if (addUrlMJava11 == null) {
+                    Class cll = cl.loadClass("jdk.internal.loader.BuiltinClassLoader");
+                    try {
+                        Method addUrlMJava111 = cll.getDeclaredMethod("appendClassPath", String.class);
+                        addUrlMJava111.setAccessible(true);
+                        addUrlMJava11 = addUrlMJava111
+                    } catch (NoSuchMethodException e) {
+                        log.log(Level.INFO, null, e);
+                        addUrlToClForJava11(cl, jrrpath)
+                        //throw e;
+
+                    }
+                }
+                if (java11Used) {
+
+                } else {
+                    addUrlMJava11.invoke(cl, jrrpath.toString());
+                }
+            }
+        }
+
+    }
+
+
+    private static volatile boolean java11Used = false;
+
+    public static void addUrlToClForJava11(ClassLoader clObject, File fileToAdd) throws Exception {
+        Class cll = clObject.loadClass("jdk.internal.loader.BuiltinClassLoader");
+        Field ucp = cll.getDeclaredField("ucp");
+        Object ucpObject = ucp.get(clObject);
+        Method addURLM = ucpObject.getClass().getMethod("addURL", URL.class);
+        addURLM.invoke(ucpObject, fileToAdd.toURL());
+    }
 
 
 }
