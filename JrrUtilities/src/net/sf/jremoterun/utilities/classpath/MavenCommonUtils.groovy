@@ -56,8 +56,10 @@ public class MavenCommonUtils {
     File downloadJarFromUrl(URL url) {
         File file3 = buildDownloadUrl(url)
         if (!file3.exists()) {
-            if (!file3.parentFile.exists()) {
-                assert file3.parentFile.mkdirs()
+            File parentFile3 = file3.getParentFile()
+            if (!parentFile3.exists()) {
+                parentFile3.mkdirs()
+                assert parentFile3.exists()
             }
             file3.bytes = url.bytes
         }

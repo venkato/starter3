@@ -27,8 +27,8 @@ class ShortcutSelector {
 
     void printHelp() {
         StackTraceElement[] trace = new Exception().getStackTrace()
-        StackTraceElement find = trace.find { it.className != ShortcutSelector.name }
-        System.out.println """${find} - available ${shortcuts.size()} shortcuts:
+        StackTraceElement stackTraceElement = trace.find { it.className != ShortcutSelector.name }
+        System.out.println """${stackTraceElement} - available ${shortcuts.size()} shortcuts:
 ${msgHelp}"""
 //        log.info "\n${msg}"
     }
@@ -37,7 +37,7 @@ ${msgHelp}"""
 
     String getInfo(Object key, Object value) {
         if (key == null) {
-            throw new NullPointerException("key is null for key ${value}")
+            throw new NullPointerException("key is null for value ${value}")
         }
         if (value == null) {
             throw new NullPointerException("value is null for key ${key}")
@@ -74,12 +74,13 @@ ${msgHelp}"""
         if (value instanceof MethodClosure) {
             return value.getMethod()
         }
-        throw new IllegalArgumentException("${value}")
+//        throw new IllegalArgumentException("${value}")
+        return "${value}"
     }
 
     void runAction(Object value) {
         if (value instanceof ClRefRef) {
-            value = value.clRef.loadClass2()
+            value = value.getClRef().loadClass2()
 //            RunnableFactory.runRunner value
 //            return
         }
@@ -95,6 +96,14 @@ ${msgHelp}"""
         }
         if (value instanceof MethodClosure) {
             value.call()
+            return
+        }
+        if (value instanceof Runnable) {
+            value.run();
+            return
+        }
+        if (value instanceof Script) {
+            value.run();
             return
         }
         throw new IllegalArgumentException("${value}")

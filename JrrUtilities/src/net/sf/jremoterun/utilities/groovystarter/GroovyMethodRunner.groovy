@@ -1,8 +1,6 @@
 package net.sf.jremoterun.utilities.groovystarter
 
 import groovy.transform.CompileStatic
-import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.classpath.AddFilesToUrlClassLoaderGroovy
 import net.sf.jremoterun.utilities.classpath.JrrGroovyScriptRunner
 
@@ -84,11 +82,14 @@ public class GroovyMethodRunner {
         gmrp.starterScript = initialScript
         gmrp.setPhaseChanger(JrrRunnerPhase.selfCheck, this.&selfCheck)
         gmrp.setPhaseChanger(JrrRunnerPhase.userConfigLoaded, this.&loadUserConfig)
-        gmrp.setPhaseChanger(JrrRunnerPhase.directoryConfigLoaded, this.&loadDirConfig)
+        gmrp.setPhaseChanger(JrrRunnerPhase.userConfigWinLoaded, this.&loadUserConfigShared)
+        gmrp.setPhaseChanger(JrrRunnerPhase.userConfig2Loaded, this.&loadUserConfig2)
         gmrp.setPhaseChanger(JrrRunnerPhase.hostConfigLinuxLoaded, this.&loadHostLinuxConfig)
         gmrp.setPhaseChanger(JrrRunnerPhase.hostConfigWindowsLoaded, this.&loadHostWindowConfig)
+        gmrp.setPhaseChanger(JrrRunnerPhase.directoryConfigLoaded, this.&loadDirConfig)
         gmrp.setPhaseChanger(JrrRunnerPhase.createGroovyClassLoader, this.&createGroovyClassLoader)
         gmrp.setPhaseChanger(JrrRunnerPhase.createClassLoaderAdder, this.&createClassLoaderAdder)
+        gmrp.setPhaseChanger(JrrRunnerPhase.userConfig2ClassesAdd, this.&loadUserConfig2ClassesAdd)
     }
 
     void loadUserConfig() {
@@ -109,6 +110,39 @@ public class GroovyMethodRunner {
     void loadHostLinuxConfig() {
         if (gmrp.groovyHostConfigLinuxRaw != null && gmrp.groovyHostConfigLinuxRaw.exists()) {
             loadScriptFromFile(gmrp.groovyHostConfigLinuxRaw)
+        }
+    }
+
+    void loadUserConfig2ClassesAdd() {
+        if(JrrStarterVariables.classesDir!=null) {
+            gmrp.addFilesToClassLoader.add(JrrStarterVariables.classesDir);
+        }
+    }
+
+    void loadUserConfig2() {
+        if (JrrStarterVariables.filesDir!=null) {
+            File configRaw = new File(JrrStarterVariables.filesDir,JrrStarterConstatnts.rawConfigFileName)
+            if(configRaw.exists()) {
+                loadScriptFromFile(configRaw);
+            }
+        }
+    }
+
+
+    void loadUserConfigShared(){
+        if(gmrp.loadUserRawWindowsConfigShared){
+            File homeFromWindows = gmrp.detectHomeFromWindows()
+            if(homeFromWindows!=null){
+                String path1=homeFromWindows.canonicalFile.absolutePath.replace('\\','/')
+                String path2=gmrp.userHome.canonicalFile.absolutePath.replace('\\','/')
+                if(path1==path2){
+                    // otherwise file loaded
+                    File f= new File(homeFromWindows,JrrStarterConstatnts.rawConfigFileName)
+                    if(f.exists()){
+                        loadScriptFromFile(f)
+                    }
+                }
+            }
         }
     }
 

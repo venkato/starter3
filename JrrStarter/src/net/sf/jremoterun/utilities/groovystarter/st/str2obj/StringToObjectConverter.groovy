@@ -17,6 +17,7 @@ class StringToObjectConverter {
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
     public static StringToObjectConverter defaultConverter = new StringToObjectConverter();
+//    public static boolean listAvailableEnums = true;
 
     public String listSeparator = ','
     public String nullObject = 'null'
@@ -47,10 +48,17 @@ class StringToObjectConverter {
                 return convertFromStringToArray(str, toType)
             case File:
                 return convertToFile(str)
+            case Class:
+                return convertToClass(str)
             default:
                 return convertFromStringToTypeDefault(str, toType, genericArg)
         }
+    }
 
+    Class convertToClass(String str) {
+        str = str.trim().replace('/', '.')
+        Class<?> clazz = JrrClassUtils.getCurrentClassLoader().loadClass(str)
+        return clazz
     }
 
     Object convertFromStringToTypeDefault(String str, Class toType, Type genericArg) {
@@ -80,21 +88,21 @@ class StringToObjectConverter {
         return str == nullObject
     }
 
-    List<String> trueList = ['true','t','y']
-    List<String> falseList = ['false','f','n']
+    List<String> trueList = ['true', 't', 'y']
+    List<String> falseList = ['false', 'f', 'n']
 
     boolean convertToBoolean(String str) {
-        if(trueList.contains(str)){
+        if (trueList.contains(str)) {
             return true
         }
-        if(falseList.contains(str)){
+        if (falseList.contains(str)) {
             return false
         }
-        String lowerCase= str.toLowerCase()
-        if(trueList.contains(lowerCase)){
+        String lowerCase = str.toLowerCase()
+        if (trueList.contains(lowerCase)) {
             return true
         }
-        if(falseList.contains(lowerCase)){
+        if (falseList.contains(lowerCase)) {
             return false
         }
         throw new IllegalArgumentException("Failed cast : ${str} to boolean");

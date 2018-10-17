@@ -1,6 +1,8 @@
 package net.sf.jremoterun.utilities
 
 import groovy.transform.CompileStatic
+import net.sf.jremoterun.JrrUtils
+
 //import sun.misc.URLClassPath
 
 import java.lang.management.ManagementFactory
@@ -14,6 +16,19 @@ public class UrlCLassLoaderUtils {
 
 
     static List<File> getFilesFromUrlClassloader(URLClassLoader urlClassLoader) throws Exception {
+        List<File> files = getFilesFromUrlClassloader2(urlClassLoader)
+        if(files.size()==0){
+            List<URL> urls = urlClassLoader.getURLs().toList()
+            if(urls.size()!=0) {
+                log.info "failed find files in urlclassloader"
+            }
+            List<File> collect = urls.collect { UrlToFileConverter.c.convert(it) };
+            return collect
+        }
+        return files
+    }
+
+    static List<File> getFilesFromUrlClassloader2(URLClassLoader urlClassLoader) throws Exception {
 
         //sun.misc.URLClassPath
         Object ucp = JrrClassUtils.getFieldValue(urlClassLoader, "ucp")
@@ -24,7 +39,6 @@ public class UrlCLassLoaderUtils {
 
         //log.info("classloader class name ${urlClassLoader.class.name}")
         List<File> collect = urlss.collect { UrlToFileConverter.c.convert(it) };
-
         collect.addAll((List) loaders.findAll { it.class.name.contains('FileLoader') }.collect {
             JrrClassUtils.getFieldValue(it, "dir")
         })
@@ -33,17 +47,32 @@ public class UrlCLassLoaderUtils {
 
     static URL getClassLocation3(final Class clazz)
             throws MalformedURLException {
+        if(clazz.equals(Class)){
+            throw new IllegalArgumentException("Strange class name")
+        }
         final String tailJava = buildClassNameSuffix(clazz.getName());
         final String tailGroovy = buildClassNameSuffixGroovy(clazz.getName());;
         String tail = tailJava
 //        log.info "j = ${tailJava}, g = ${tailGroovy}"
+        URL urlRes;
         ClassLoader cl = clazz.getClassLoader()
-        final URL urlRes = cl.getResource(tailJava);
-        if (urlRes == null) {
-            tail = tailGroovy
-            urlRes = cl.getResource(tailGroovy);
+        if(cl==null){
+            urlRes= clazz.getResource('/'+tailJava)
             if (urlRes == null) {
-                return null;
+                tail = tailGroovy
+                urlRes = clazz.getResource('/'+tailGroovy);
+                if (urlRes == null) {
+                    return null;
+                }
+            }
+        }else {
+            urlRes = cl.getResource(tailJava);
+            if (urlRes == null) {
+                tail = tailGroovy
+                urlRes = cl.getResource(tailGroovy);
+                if (urlRes == null) {
+                    return null;
+                }
             }
         }
         String url = urlRes.toString();

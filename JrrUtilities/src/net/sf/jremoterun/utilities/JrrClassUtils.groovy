@@ -2,8 +2,9 @@ package net.sf.jremoterun.utilities
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.JrrUtils
+import net.sf.jremoterun.callerclass.CallerClassIgnore
+import net.sf.jremoterun.callerclass.GetCallerClassS
 import net.sf.jremoterun.utilities.classpath.ClRef
-import sun.reflect.Reflection
 
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -22,40 +23,20 @@ public class JrrClassUtils {
     public static Map<Class, Field[]> isReadOnlyFields = new HashMap();
     public static Method getFieldAccessorMethod;
     public static Field modifiersField;
+    public static String mainMethodName = 'main';
 
     /**
      * Classes, which will be ignored during searching caller class.
      */
 
-    public static HashSet<String> ignoreClassesForCurrentClass;
+    public static HashSet<String> ignoreClassesForCurrentClass = CallerClassIgnore.ignoreClassesForCurrentClass;
 
-    static {
-        String[] ignoreClassesForCurrentClass2 = [//
-                                                  "java_util_logging_Logger",
-                                                  "groovy.ui.GroovyMain", "groovy.lang.GroovyShell",//
-                                                  "groovy.lang.MetaMethod",
-                                                  "groovy.lang.Closure", "groovy.lang.MetaClassImpl",//
-                                                  "org.apache.commons.logging.", "org.apache.log4j.",//
-                                                  "java.util.logging.", "org.slf4j.",//
-                                                  "ch.qos.logback",
-                                                  "org.eclipse.jdt.internal.junit", "sun.reflect.",//
-                                                  "java.lang.reflect.Method", "org.codehaus.groovy.runtime.",//
-                                                  "org.codehaus.groovy.reflection.", "org.apache.logging.",//
-                                                  "org.eclipse.jdt.internal.junit", //
-                                                  "com.intellij.idea.IdeaLogger", "com.intellij.openapi.diagnost",// idea
-                                                  "org.sonatype.guice.bean.reflect.Logs",
-                                                  "net.sf.jremoterun.utilities.groovystarter.st.JdkLogFormatter", //
-                                                  "sun.util.logging.", //
-                                                  "org.codehaus.groovy.tools.shell.util.Logger",
-                                                  //
-                                                  "net.sf.jremoterun.utilities.nonjdk.log.JdkLoggerExtentionClass",
-                                                  //
-                "org.jboss.windup.decompiler.fernflower.FernflowerJDKLogger",//
-                                                  JrrClassUtils.getName()];
-        ignoreClassesForCurrentClass = new HashSet<String>(Arrays.asList(ignoreClassesForCurrentClass2));
-//		Collections.sort(ignoreClassesForCurrentClass,String.CASE_INSENSITIVE_ORDER);
+
+
+    static void addIgnoreClass(Class clazz){
+        assert clazz!= Class
+        ignoreClassesForCurrentClass.add(clazz.getName())
     }
-
 
     public static StringBuilder printExceptionWithoutIgnoreClasses(Throwable t) {
         StringBuilder sb = new StringBuilder();
@@ -227,8 +208,8 @@ public class JrrClassUtils {
         }
         final Object onInvoke;
         final Class clazz;
-        if (onInvoke instanceof ClRef) {
-            clazz = onInvoke.loadClass2()
+        if (onObjectOrClass instanceof ClRef) {
+            clazz = onObjectOrClass.loadClass2()
             onInvoke = null;
         } else if (onObjectOrClass instanceof Class) {
             clazz = (Class) onObjectOrClass;
@@ -257,6 +238,9 @@ public class JrrClassUtils {
      */
     public static <T> Constructor<T> findContructor(Class<T> clazz, final int numberOfParams)
             throws NoSuchMethodException {
+        if(clazz == null){
+            throw new IllegalArgumentException("class is null when finding : ${numberOfParams}")
+        }
         for (final Constructor method : clazz.getDeclaredConstructors()) {
             final Class[] paramTypes = method.getParameterTypes();
             if (paramTypes.length == numberOfParams) {
@@ -275,6 +259,9 @@ public class JrrClassUtils {
     public static Method findMethodByCount(Class clazz,
                                            final String methodName,
                                            final int numberOfParams) throws NoSuchMethodException {
+        if(clazz == null){
+            throw new IllegalArgumentException("class is null when finding : ${methodName} ${numberOfParams}")
+        }
         Class classOriginal = clazz;
         while (true) {
             for (final Method method : clazz.getDeclaredMethods()) {
@@ -290,6 +277,10 @@ public class JrrClassUtils {
             if (clazz == Object) {
                 break;
             }
+            if(clazz == null){
+                // interface
+                break
+            }
         }
         throw new NoSuchMethodException("Class: " + classOriginal.getName() + ", method name: " + methodName + ", params count: " + numberOfParams);
     }
@@ -301,7 +292,7 @@ public class JrrClassUtils {
     }
 
     public static void runMainMethod(final Class clazz, final String[] args) throws Exception {
-        final Method mainMethod = clazz.getMethod("main", String[]);
+        final Method mainMethod = clazz.getMethod(mainMethodName, String[]);
         Object[] args2 = [args]
         mainMethod.invoke(null, args2);
     }
@@ -394,6 +385,9 @@ public class JrrClassUtils {
      */
     public static Method findMethodByParamTypes4(Class clazz, final String methodName, final Class[] params)
             throws NoSuchMethodException {
+        if(clazz == null){
+            throw new IllegalArgumentException("class is null when finding : ${methodName} ${params}")
+        }
         Class clazzOrig = clazz;
         while (true) {
             for (final Method method : clazz.getDeclaredMethods()) {
@@ -414,6 +408,11 @@ public class JrrClassUtils {
             clazz = clazz.getSuperclass();
             if (clazz == Object) {
                 break;
+            }
+
+            if(clazz == null){
+                // interface
+                break
             }
         }
         String paramsAsString = "";
@@ -480,8 +479,8 @@ public class JrrClassUtils {
         }
         final Object onInvoke;
         final Class clazz;
-        if (onInvoke instanceof ClRef) {
-            clazz = onInvoke.loadClass2()
+        if (object instanceof ClRef) {
+            clazz = object.loadClass2()
             onInvoke = null;
         }else if (object instanceof Class) {
             clazz = (Class) object;
@@ -604,6 +603,9 @@ public class JrrClassUtils {
      * Find first declared field in class
      */
     public static Field findField(Class clazzInit, final String fieldName) throws NoSuchFieldException {
+        if(clazzInit == null){
+            throw new IllegalArgumentException("class is null when finding : ${fieldName}")
+        }
         Class clazz = clazzInit;
         while (true) {
             for (final Field field : clazz.getDeclaredFields()) {
@@ -615,6 +617,10 @@ public class JrrClassUtils {
             clazz = clazz.getSuperclass();
             if (clazz == Object) {
                 break;
+            }
+            if(clazz == null){
+                // that is interface
+                break
             }
         }
         throw new NoSuchFieldException(fieldName + " " + clazzInit.getName());
@@ -640,6 +646,9 @@ public class JrrClassUtils {
             clazz = object.getClass();
             onInvoke = object;
         }
+        if(clazz==null){
+            throw new IllegalStateException("failed find class for : ${object}")
+        }
         Field field = findField(clazz, fieldName);
         if (onInvoke == null && !Modifier.isStatic(field.getModifiers())) {
             throw new IllegalArgumentException("field is not static, but onInvoke is null");
@@ -653,6 +662,7 @@ public class JrrClassUtils {
      * called. Last element is class where current thread is created. Classes
      * associated with java.lang.reflect.Method.invoke() are ignored.
      */
+    /*
     public static ArrayList<Class> buildClassStack() {
         final ArrayList<Class> result = new ArrayList();
         int i = 2;
@@ -665,6 +675,8 @@ public class JrrClassUtils {
         return result;
     }
 
+     */
+
     public static Logger getJdkLogForCurrentClass() {
 //		Thread.dumpStack();
         Class currentClass = getCurrentClass();
@@ -676,27 +688,20 @@ public class JrrClassUtils {
     }
 
     private static Class getCurrentClassImpl() {
-        int i = 2;
-        while (true) {
-            i++;
-            Class<?> callerClass = Reflection.getCallerClass(i);
-            String name = callerClass.getName();
-            if (!checkIfClassIgnored(name)) {
-                return callerClass;
-            }
-        }
+        return GetCallerClassS.getCallerClassImpl().getCallerClass();
     }
 
     static Class getCurrentClassImpl4(int depth) {
-        int i = 1;
-        while (true) {
-            i++;
-            Class<?> callerClass = Reflection.getCallerClass(i);
-            String name = callerClass.getName();
-            if (!checkIfClassIgnored(name)) {
-                return callerClass;
-            }
-        }
+        return GetCallerClassS.getCallerClassI.getCallerClass();
+//        int i = 1;
+//        while (true) {
+//            i++;
+//            Class<?> callerClass = Reflection.getCallerClass(i);
+//            String name = callerClass.getName();
+//            if (!checkIfClassIgnored(name)) {
+//                return callerClass;
+//            }
+//        }
     }
 
     static boolean checkIfClassIgnored(String name) {

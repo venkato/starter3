@@ -11,8 +11,11 @@ call:copy_file groovy_custom.jar
 call:copy_file groovy.jar
 
 rem -javaagent:%GR_HOME%\libs\copy\jremoterun.jar
+SET JRR_GROOVY_OPTS2=-javaagent:%GR_HOME%\libs\copy\jremoterun.jar -classpath %GR_HOME%\libs\copy\groovy_custom.jar;%GR_HOME%\libs\copy\groovy.jar groovy.ui.GroovyMain %GR_HOME%\firstdownload\groovyrunner.groovy
 
-%GR_HOME%\firstdownload\javarunner.bat %GROOVY_OPTS% -javaagent:%GR_HOME%\libs\copy\jremoterun.jar -classpath %GR_HOME%\libs\copy\groovy_custom.jar;%GR_HOME%\libs\copy\groovy.jar groovy.ui.GroovyMain %GR_HOME%\firstdownload\groovyrunner.groovy 2 %*%
+%GR_HOME%\firstdownload\javarunner.bat %*%
+
+rem %GR_HOME%\firstdownload\javarunner.bat %GROOVY_OPTS% -javaagent:%GR_HOME%\libs\copy\jremoterun.jar -classpath %GR_HOME%\libs\copy\groovy_custom.jar;%GR_HOME%\libs\copy\groovy.jar groovy.ui.GroovyMain %GR_HOME%\firstdownload\groovyrunner.groovy 2 %*%
 
 if %ERRORLEVEL% == 0 goto:eof
 EXIT /B 1

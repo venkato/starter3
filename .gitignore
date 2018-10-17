@@ -31,13 +31,17 @@ build/
 onejar/jrrutilities.jar
 firstdownload/javarunner.bat
 firstdownload/javarunnerw.bat
+firstdownload/javarunner.sh
 firstdownload/.gradle/
 firstdownload/build/
 firstdownload/logs/
 firstdownload/jrrdownload/
+firstdownload/*.iml
 JrrUtilities/.gradle/
 JrrUtilities/build/
+JrrUtilities/*.iml
 JrrStarter/build/
+JrrStarter/*.iml
 JrrStarter/.gradle/
 JrrInit/build/
 JrrInit/.gradle/

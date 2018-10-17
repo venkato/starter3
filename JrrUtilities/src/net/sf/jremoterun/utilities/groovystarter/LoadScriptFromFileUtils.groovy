@@ -13,6 +13,8 @@ class LoadScriptFromFileUtils {
 
     public static String varNameInScript = "a"
 
+    public static volatile boolean checkFileEndsWithGroovy = true
+
 
     static Object loadScriptFromFile(File file, GroovyClassLoader groovyClassLoader) {
         Class clazz = loadClassFromFile(file, groovyClassLoader)
@@ -62,14 +64,20 @@ class LoadScriptFromFileUtils {
             return s.run()
         }
 //        return JrrClassUtils.invokeJavaMethod(instance, 'run')
-        throw new IllegalArgumentException("stranage class ${instance.class.getName()} ${errorMsg}")
+        String failedClassName = instance.getClass().getName();
+        throw new IllegalArgumentException("stranage class ${failedClassName} ${errorMsg}")
 
     }
 
     static Class loadClassFromFile(File file, GroovyClassLoader groovyClassLoader) {
         assert groovyClassLoader != null
         JrrUtilities3.checkFileExist(file)
-        file = file.absoluteFile.canonicalFile
+        file = file.getAbsoluteFile().getCanonicalFile()
+        if(LoadScriptFromFileUtils.checkFileEndsWithGroovy){
+            if(!file.getName().endsWith('.groovy')){
+                throw new Exception("that is not groovy file : ${file.getAbsolutePath()}")
+            }
+        }
         Class clazz = groovyClassLoader.parseClass(file)
         assert clazz != null
         return clazz

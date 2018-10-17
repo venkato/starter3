@@ -84,4 +84,10 @@ abstract class AddFilesToClassLoaderGroovySave extends AddFilesToClassLoaderGroo
     void addSourceS(String source) throws Exception {
         getSourceElements().add(source);
     }
+
+    // TODO refactor, retrun null not nice
+    File addSourceMNoExceptionOnMissing(MavenId mavenId){
+        getSourceElements().add(mavenId);
+        return null
+    }
 }

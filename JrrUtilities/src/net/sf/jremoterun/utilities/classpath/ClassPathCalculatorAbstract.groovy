@@ -178,11 +178,14 @@ class ClassPathCalculatorAbstract {
         }
         if (obj instanceof MavenIdContains) {
             MavenIdContains m = (MavenIdContains) obj;
-            return m.getM();
+            return transformMavenIdContains(m)
         }
         return obj
     }
 
+    Object transformMavenIdContains(MavenIdContains  mavenIdContains){
+        return mavenIdContains.getM();
+    }
 
     void calcAndAddClassesToAdded(AddFilesToClassLoaderCommon adder) {
         calcClassPathFromFiles12()

@@ -14,11 +14,12 @@ import java.util.logging.Logger
 @CompileStatic
 public abstract class AddFilesToClassLoaderCommon {
 
-    public static final Logger logStatic = Logger.getLogger(JrrClassUtils.currentClass.name);
+    public static final Logger logStatic = Logger.getLogger(JrrClassUtils.getCurrentClass().getName());
 
     public Logger logAdder = logStatic;
 
     public boolean isLogFileAlreadyAdded = true
+    public boolean checkJarFileIsZipArchive = true
 
     public volatile MavenCommonUtils mavenCommonUtils = new MavenCommonUtils()
     NewValueListener<File> addFileListener
@@ -48,13 +49,28 @@ public abstract class AddFilesToClassLoaderCommon {
 
     void addFile(File file) throws Exception {
         JrrUtilities3.checkFileExist(file)
-        file = file.canonicalFile.absoluteFile;
+        file = file.getCanonicalFile().getAbsoluteFile();
         if (addedFiles2.contains(file)) {
             if (isLogFileAlreadyAdded) {
                 logAdder.info "file already added ${file}"
 //                Thread.dumpStack()
             }
         } else {
+            if (checkJarFileIsZipArchive) {
+                String fileName = file.getName()
+                if (fileName.endsWith('.zip') || fileName.endsWith('.jar')) {
+                    if(!file.isFile()){
+                        throw new Exception("Not a file : ${file}")
+                    }
+                    boolean isZip = JrrZipUtils.isZipArchive(file)
+                    if (!isZip) {
+                        throw new Exception("No zip archive : ${file}")
+                    }
+                }
+                if(file.isDirectory()){
+
+                }
+            }
             addFileImpl(file);
             addedFiles2.add(file)
         }
@@ -134,17 +150,17 @@ public abstract class AddFilesToClassLoaderCommon {
         }
     }
 
-    void addMMany(List<MavenId> mavenIds){
+    void addMMany(List<MavenId> mavenIds) {
         addAll(mavenIds)
     }
 
-    void addMWithDepsMany(List<MavenId> mavenIds){
+    void addMWithDepsMany(List<MavenId> mavenIds) {
         mavenIds.each {
             addMWithDependeciesDownload(it)
         }
     }
 
-    void addFMany(List<File> mavenIds){
+    void addFMany(List<File> mavenIds) {
         addAll(mavenIds)
     }
 
@@ -198,10 +214,16 @@ public abstract class AddFilesToClassLoaderCommon {
     }
 
     void addMWithDependeciesDownload(MavenId artifact) throws IOException {
+        MavenIdAndRepo mavenIdAndRepo = new MavenIdAndRepo(artifact, null)
+        addMWithDependeciesDownload(mavenIdAndRepo)
+    }
+
+    void addMWithDependeciesDownload(MavenIdAndRepo artifact) throws IOException {
         if (mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver == null) {
             throw new NullPointerException("mavenDependenciesResolver is null : add dropship, artifact = ${artifact}")
         }
-        List<MavenId> dependencies = mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver.resolveAndDownloadDeepDependencies(artifact, mavenCommonUtils.fileType == MavenFileType2.source.fileSuffix, true)
+        boolean needSrc = mavenCommonUtils.fileType == MavenFileType2.source.fileSuffix
+        List<MavenId> dependencies = mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver.resolveAndDownloadDeepDependencies(artifact.m, needSrc, true, artifact.repo)
         if (dependencies.size() == 0) {
             throw new Exception("Failed resolve : ${artifact}")
         }
@@ -213,43 +235,44 @@ public abstract class AddFilesToClassLoaderCommon {
 //        addMavenExisted(dependencies)
     }
 
-    File resolveMavenId(MavenId artifact) {
+    File resolveMavenId(MavenIdAndRepo artifact) {
         File file
-        if (artifact.version == mavenCommonUtils.lastVersionInd) {
-            MavenId version = mavenCommonUtils.findLatestMavenOrGradleVersion(artifact)
+        if (artifact.m.version == mavenCommonUtils.lastVersionInd) {
+            MavenId version = mavenCommonUtils.findLatestMavenOrGradleVersion(artifact.m)
             if (version != null) {
                 file = mavenCommonUtils.findMavenOrGradle(version)
             }
         } else {
-            file = mavenCommonUtils.findMavenOrGradle(artifact);
+            file = mavenCommonUtils.findMavenOrGradle(artifact.m);
         }
         if (file != null) {
             return file
         }
         if (mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver == null) {
-            file = onMissingMavenId(artifact)
+            file = onMissingMavenId(artifact.m)
             assert file != null
             return file
         } else {
-            List<MavenId> dependencies3 = mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver.resolveAndDownloadDeepDependencies(artifact, false, false)
+            List<MavenId> dependencies3 = mavenCommonUtils.mavenDefaultSettings.mavenDependenciesResolver.resolveAndDownloadDeepDependencies(artifact.m, false, false, artifact.repo)
 //            logAdder.info "found dep = ${dependencies3}"
-            file = mavenCommonUtils.findMavenOrGradle(artifact)
+            MavenId mavenId4 = artifact.m
+            file = mavenCommonUtils.findMavenOrGradle(artifact.m)
             if (file == null) {
                 if (dependencies3.size() == 0) {
                     throw new Exception("failed find dep for ${artifact}")
                 }
                 MavenId mavenId3 = dependencies3.find {
-                    it.artifactId == artifact.artifactId && it.groupId == artifact.groupId && it.version == artifact.version
+                    it.artifactId == artifact.m.artifactId && it.groupId == artifact.m.groupId && it.version == artifact.m.version
                 }
                 if (mavenId3 == null) {
                     throw new Exception("failed find dep for ${artifact}, got from resolver : ${dependencies3}")
                 }
-                artifact = mavenId3
-                file = mavenCommonUtils.findMavenOrGradle(artifact)
+                mavenId4 = mavenId3
+                file = mavenCommonUtils.findMavenOrGradle(mavenId3)
 //                logAdder.info "found file = ${file}"
             }
             if (file == null) {
-                file = onMissingMavenId(artifact)
+                file = onMissingMavenId(mavenId4)
                 assert file != null
                 return file
             } else {
@@ -259,8 +282,19 @@ public abstract class AddFilesToClassLoaderCommon {
         }
     }
 
+    File resolveMavenId(MavenId artifact) {
+        MavenIdAndRepo mavenIdAndRepo = new MavenIdAndRepo(artifact, null);
+        return resolveMavenId(mavenIdAndRepo)
+    }
+
     void addM(MavenIdContains artifact) throws IOException {
         addM(artifact.getM());
+    }
+
+    void addM(MavenIdAndRepoContains artifact) throws IOException {
+        File file = resolveMavenId(artifact.getMavenIdAndRepo())
+        addF(file);
+
     }
 
     void addM(MavenId artifact) throws IOException {
@@ -351,7 +385,7 @@ public abstract class AddFilesToClassLoaderCommon {
     }
 
     void addGenericEnteries(Collection collection) {
-        if(collection.isEmpty()){
+        if (collection.isEmpty()) {
             throw new IllegalArgumentException("Empty collection")
         }
         for (Object entry : collection) {
@@ -387,8 +421,15 @@ public abstract class AddFilesToClassLoaderCommon {
                 MavenId mavenId1 = (MavenId) object;
                 addM(mavenId1);
                 break;
+            case { object instanceof MavenIdAndRepoContains }:
+                MavenIdAndRepoContains mavenId1 = (MavenIdAndRepoContains) object;
+                addM(mavenId1);
+                break;
             case { object instanceof File }:
                 File file = object as File
+                if (file.isFile() && file.getName().endsWith('.groovy')) {
+                    throw new Exception("File ends with groovy ${file}")
+                }
                 addF(file)
                 break;
             case { object instanceof MavenPath }:
@@ -445,7 +486,6 @@ public abstract class AddFilesToClassLoaderCommon {
         other.mavenCommonUtils = mavenCommonUtils
         Thread.dumpStack()
     }
-
 
 
 }

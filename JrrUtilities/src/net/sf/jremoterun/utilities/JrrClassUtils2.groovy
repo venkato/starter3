@@ -17,7 +17,6 @@ import java.util.logging.Logger
 
 import groovy.transform.CompileStatic;
 import net.sf.jremoterun.JrrUtils;
-import sun.reflect.Reflection;
 
 @CompileStatic
 public class JrrClassUtils2 {

@@ -7,13 +7,12 @@ import net.sf.jremoterun.utilities.groovystarter.runners.ClRefRef
 
 import java.util.logging.Logger
 
-@EqualsAndHashCode
 @CompileStatic
 class ClRef implements ClRefRef,Serializable {
 
-    private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
+    //private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
-    public static ClassLoader defaultClassLoader = JrrClassUtils.getCurrentClassLoader()
+    public static ClassLoader defaultClassLoader = ClRef.getClassLoader()
 
 
     String className;
@@ -27,7 +26,16 @@ class ClRef implements ClRefRef,Serializable {
 
 
     ClRef(Class clazz) {
-        this(clazz.name)
+        this(clazz.getName())
+    }
+
+
+    String getName(){
+        return className
+    }
+
+    String getClassPath(){
+        return className.replace('.', '/');
     }
 
     @Override
@@ -80,5 +88,21 @@ class ClRef implements ClRefRef,Serializable {
         return className
     }
 
+    boolean equals(o) {
+        if(o==null){
+            return false
+        }
+        if (this.is(o)) return true;
+        if (getClass() != o.class) return false;
 
+        ClRef clRef = (ClRef) o;
+
+        if (className != clRef.className) return false;
+
+        return true;
+    }
+
+    int hashCode() {
+        return (className != null ? className.hashCode() : 0)
+    }
 }

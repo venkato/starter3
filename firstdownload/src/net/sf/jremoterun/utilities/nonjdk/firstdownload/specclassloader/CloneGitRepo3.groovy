@@ -14,7 +14,6 @@ class CloneGitRepo3 {
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
     private static String gitDirSuffix = "git_download_"
-    private static String fileSuffix = "file_"
 
     File gitBaseDir
     File gitTmpDir
@@ -67,15 +66,7 @@ class CloneGitRepo3 {
         throw new Exception("can't find free dir in ${gitTmpDir}")
     }
 
-    static void cleanDir(File toDir) {
-        if (toDir.exists()) {
-            toDir.deleteDir()
-        }
-        toDir.mkdirs()
-        assert toDir.exists()
-        assert toDir.listFiles().length == 0
 
-    }
 
     static String createGitRepoSuffix(String src) {
         if (src.endsWith('.git')) {
@@ -89,14 +80,6 @@ class CloneGitRepo3 {
         return dirSuffix
     }
 
-    static File cloneGitRepo2(File gitDownloadDir, String src) {
-        assert gitDownloadDir.exists()
-        String dirSuffix = createGitRepoSuffix(src)
-        File toDir = new File(gitDownloadDir, dirSuffix)
-        cleanDir(toDir)
-        cloneGitRepo(toDir, src)
-        return toDir
-    }
 
     static void cloneGitRepo(File toDir, String src) {
         log.info "downloading ${src}"

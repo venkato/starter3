@@ -5,7 +5,6 @@ import net.sf.jremoterun.ICodeForExecuting;
 import net.sf.jremoterun.JrrUtils;
 import sun.awt.AppContext;
 import sun.misc.Unsafe;
-import sun.reflect.Reflection;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -269,13 +268,13 @@ public class JrrUtilities3 {
         return value;
     }
 
-    public static Class getCurrentClass() {
-        return Reflection.getCallerClass(2);
-    }
+//    public static Class getCurrentClass() {
+        //return Reflection.getCallerClass(2);
+//    }
 
-    public static ClassLoader getCurrentClassLoader() {
-        return Reflection.getCallerClass(2).getClassLoader();
-    }
+//    public static ClassLoader getCurrentClassLoader() {
+//        return Reflection.getCallerClass(2).getClassLoader();
+//    }
 
     public static LinkedHashSet<URL> getInitClassPath() {
         final URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();

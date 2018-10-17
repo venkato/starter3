@@ -2,10 +2,14 @@ package net.sf.jremoterun.utilities.classpath
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
+import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.groovystarter.ClasspathConfigurator
 import net.sf.jremoterun.utilities.groovystarter.GroovyConfigLoader
+import net.sf.jremoterun.utilities.groovystarter.LoadScriptFromFileUtils
+
 
 import java.security.MessageDigest
+import java.util.logging.Level
 import java.util.logging.Logger
 
 /**
@@ -28,12 +32,17 @@ class JrrGroovyScriptRunner {
     java.nio.charset.Charset enconding;
 
     JrrGroovyScriptRunner() {
-        this(JrrClassUtils.currentClassLoader)
-        enconding = java.nio.charset.Charset.forName('utf8')
+        this(JrrClassUtils.getCurrentClassLoader())
+
     }
 
     JrrGroovyScriptRunner(ClassLoader parentClassLoaderToLoad) {
+        initCl(parentClassLoaderToLoad)
+    }
+
+    protected void initCl(ClassLoader parentClassLoaderToLoad){
         this.parentClassLoaderToLoad = parentClassLoaderToLoad
+        enconding = java.nio.charset.Charset.forName('utf8')
         groovyShell = createGroovyShell(parentClassLoaderToLoad)
     }
 
@@ -66,6 +75,16 @@ class JrrGroovyScriptRunner {
 
 
     Class createScriptClass(String scriptSource, String scriptName) {
+        if(scriptSource==null){
+            throw new NullPointerException('scriptSource is null')
+        }
+
+        if(scriptName==null){
+            throw new NullPointerException('scriptName is null')
+        }
+        if(enconding==null){
+            throw new NullPointerException('encoding is null')
+        }
         String digest;
         if (useCache) {
             initDigest()
@@ -76,11 +95,47 @@ class JrrGroovyScriptRunner {
             }
         }
         log.fine "creating script ${scriptName}"
-        Class scriptClass = groovyShell.classLoader.parseClass(scriptSource, scriptName)
+        Class scriptClass = groovyShell.getClassLoader().parseClass(scriptSource, scriptName)
         if (useCache) {
             scriptCache.put(digest, scriptClass);
         }
         return scriptClass;
+    }
+
+    Object loadSettingsNoParam(String scriptSource, String scriptName) {
+        Class scriptClass = createScriptClass(scriptSource, scriptName)
+        Object instance = scriptClass.newInstance()
+        return LoadScriptFromFileUtils.runNoParams(instance,  null)
+    }
+
+
+    Object loadSettingsNoParam(File file) {
+        try {
+            JrrUtilities3.checkFileExist(file)
+            return loadSettingsNoParam(file.text, file.name)
+        } catch (Throwable e) {
+            log.log(Level.SEVERE,"failed load ${file}",e)
+            throw e
+        }
+    }
+
+
+
+    Object loadSettingsWithParam(String scriptSource, String scriptName, Object param) {
+        Class scriptClass = createScriptClass(scriptSource, scriptName)
+        Object instance = scriptClass.newInstance()
+        return LoadScriptFromFileUtils.runWithParams(instance, param, null)
+    }
+
+
+    Object loadSettingsWithParam(File file, Object param) {
+        try {
+            JrrUtilities3.checkFileExist(file)
+            return loadSettingsWithParam(file.text, file.name, param)
+        } catch (Throwable e) {
+            log.log(Level.SEVERE,"failed load ${file}",e)
+            throw e
+        }
     }
 
     void initDigest() {
@@ -89,7 +144,14 @@ class JrrGroovyScriptRunner {
         }
     }
 
+
+
     void addFilesToClassLoaderF(File file, AddFilesToClassLoaderCommon addCl) {
+        if(LoadScriptFromFileUtils.checkFileEndsWithGroovy){
+            if(!file.getName().endsWith('.groovy')){
+                throw new Exception("that is not groovy file : ${file.getAbsolutePath()}")
+            }
+        }
         addFilesToClassLoader(file.text, file.name, addCl)
     }
 }

@@ -40,6 +40,7 @@ class JrrInitV2 implements RunnerInterface {
     public
     static boolean showExceptionInSwingWindowValue = "true".equalsIgnoreCase(System.getProperty(showExceptionInSwingWindow));
 
+    static ClRef checkCoreClassesLoaded = new ClRef('net.sf.jremoterun.utilities.init.JrrCheckBaseClassExists')
     static ClRef setDepResolver = new ClRef('net.sf.jremoterun.utilities.init.JrrInit3')
 
     static ClRef fieldAccessorSetter = new ClRef('net.sf.jremoterun.utilities.JrrFieldAccessorSetter')
@@ -84,10 +85,11 @@ class JrrInitV2 implements RunnerInterface {
     void preRun2() {
         JdkLogFormatter.setLogFormatter()
 //        gmrp.preparedClassName = GroovyMethodRunner2.name
-        gmrp.addL(JrrRunnerPhase.addJrrStarterLib, false, DownloadDropShip2.&addJavassist)
-        gmrp.addL(JrrRunnerPhase.checks, false, new JrrStarterChecks())
         gmrp.addL(JrrRunnerPhase.createGroovyClassLoader, false, this.&setSystemClassLoaderM)
+        gmrp.addL(JrrRunnerPhase.addJrrStarterLib, false, new DownloadDropShip2())
+        gmrp.addL(JrrRunnerPhase.addJrrStarterLib, false, checkCoreClassesLoaded)
         gmrp.addL(JrrRunnerPhase.addJrrStarterLib, false, setDepResolver)
+        gmrp.addL(JrrRunnerPhase.checks, false, new JrrStarterChecks())
 
         gmrp.jrrUtilsPhaseDoneAfter = JrrRunnerPhase2.afterCoreLibAdded
     }

@@ -19,6 +19,7 @@ public class GroovyMethodRunnerParams2 {
     public volatile GroovyMethodRunner2 groovyMethodRunner2;
 
     public volatile boolean annotationParser2 = true;
+    public volatile Boolean runMainJavaMethod ;
     public volatile ClassPreProcessor annotationParser3 ;
     public volatile ClassByteCodeHandler annotationParser4 ;
 
@@ -37,6 +38,7 @@ public class GroovyMethodRunnerParams2 {
 
     public volatile File directoryConfig = new File(userDir, JrrStarterConstatnts.configFileName);
 
+    public volatile boolean loadUserWindowsConfigShared = true;
 
     public volatile File groovyHostConfigLinux = new File("${JrrStarterConstatnts.jrrConfigDirLinuxAllUsers}/${JrrStarterConstatnts.configFileName}");
 

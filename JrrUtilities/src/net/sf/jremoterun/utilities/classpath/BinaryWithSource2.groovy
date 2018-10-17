@@ -9,7 +9,7 @@ import java.util.logging.Logger
 
 @Canonical
 @CompileStatic
-class BinaryWithSource2 implements Serializable,ToFileRef2,BinaryWithSourceI{
+class BinaryWithSource2 implements Serializable, ToFileRef2, BinaryWithSourceI {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
@@ -34,9 +34,8 @@ class BinaryWithSource2 implements Serializable,ToFileRef2,BinaryWithSourceI{
 
     @Override
     List<File> resolveSource() {
-        return source.collect {it.resolveToFile()}
+        return source.collect { it.resolveToFile() }
     }
-
 
 
 }

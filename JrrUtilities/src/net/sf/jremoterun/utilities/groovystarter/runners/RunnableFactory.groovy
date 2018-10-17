@@ -33,7 +33,7 @@ class RunnableFactory {
 
     static Runnable createRunnerFromFile2(File file, GroovyClassLoader groovyClassLoader) {
         JrrUtilities3.checkFileExist(file)
-        if (!file.file) {
+        if (!file.isFile()) {
             throw new IllegalArgumentException("Not a file : ${file}")
         }
         Runnable r = new RunnableFile(file, groovyClassLoader)
@@ -69,6 +69,12 @@ class RunnableFactory {
 
 
 
+
+    static void runRunner(File file) {
+        assert file.exists()
+        Runnable runner = createRunner(file)
+        runner.run()
+    }
 
     static void runRunner(Class clazz) {
         assert clazz != null

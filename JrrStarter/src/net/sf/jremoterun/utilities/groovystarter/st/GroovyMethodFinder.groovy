@@ -51,7 +51,12 @@ public class GroovyMethodFinder {
                 printSelfHelp.onMethodNotFound();
             }
             List<Method> methods1 = findAvailableMethods(onObject, false);
-            String msg = "wrong method ${methodName}, available : " + convertMethodsNamesToString(methods1)
+            String msg
+            if(methods1.size()==0){
+                msg = "wrong method ${methodName}, no public method available"
+            }else {
+                msg = "wrong method ${methodName}, available : " + convertMethodsNamesToString(methods1)
+            }
             throw new GroovyMethodFinderException(msg);
 
         }
@@ -185,7 +190,7 @@ public class GroovyMethodFinder {
         List<Class> paramTypes = (List)method.parameterTypes.toList()
         int i = 0
         List args3 = paramTypes.collect {
-            Object arg = args2[i]
+            String arg = args2[i]
             Type genericArg
             Class paramType = paramTypes[i]
             if (genericParameterTypes.length > 0) {

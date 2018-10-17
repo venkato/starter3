@@ -74,7 +74,18 @@ abstract class SeqPatternRunner {
     }
 
     void runRunners(List<Runnable> runable) {
-        runable.each { it.run() }
+        runable.each {
+            try {
+                it.run()
+            }catch(Throwable e){
+                onException(it,e)
+            }
+        }
+    }
+
+    void onException(Runnable r,Throwable e){
+        log.info "failed on ${r} : ${e}"
+        throw e
     }
 
     List<Runnable> getListeners(JrrRunnerPhaseI phase, boolean before) {

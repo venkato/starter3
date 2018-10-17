@@ -23,18 +23,23 @@ public class ShowExceptionInSwingHandler extends PrintExceptionListener {
         genericStuff(throwable)
         JFrame frame = JrrUtilities3.showException("jrr groovy runner", throwable);
         SwingUtilities.invokeLater{
-            JPanel panel = new JPanel(new FlowLayout())
-            JButton terminateButton = new JButton("Terminate JVM");
-            terminateButton.addActionListener{
-                System.exit(1);
-            }
-            panel.add(terminateButton)
-            JButton closeButton = new JButton("Close without terminate");
-            closeButton.addActionListener{
-                frame.dispose();
-            }
-            panel.add(closeButton)
+            JPanel panel = createCloseTerminateButtons(frame)
             frame.getContentPane().add(panel,BorderLayout.SOUTH)
         };
+    }
+
+    JPanel createCloseTerminateButtons(JFrame frame ){
+        JPanel panel = new JPanel(new FlowLayout())
+        JButton terminateButton = new JButton("Terminate JVM");
+        terminateButton.addActionListener{
+            System.exit(1);
+        }
+        panel.add(terminateButton)
+        JButton closeButton = new JButton("Close without terminate");
+        closeButton.addActionListener{
+            frame.dispose();
+        }
+        panel.add(closeButton)
+        return panel;
     }
 }

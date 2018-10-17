@@ -9,27 +9,35 @@ public enum JrrRunnerPhase implements JrrRunnerPhaseI {
 
 
     begin,
-//    onStartup,
+    /**
+     used in JrrInitV2
+     */
     argsSet,
     selfCheck,
-//    beforeConfigLoaded,
     createGroovyClassLoader,
     userConfigLoaded,
-    directoryConfigLoaded,
+    userConfigWinLoaded,
     hostConfigLinuxLoaded,
     hostConfigWindowsLoaded,
+    directoryConfigLoaded,
     createClassLoaderAdder,
-//    afterConfigLoaded,
-    // JrrJavasist - no, Javassist - no
-//    makeInitClassPath,
-    //
-//    afterInitClassPathSetCheck,
-    // JrrJavasist - yes, Javassist - no
-//    afterInitClassPathSet,
-    // After all :
+    userConfig2ClassesAdd,
+    userConfig2Loaded,
+    /**
+     used in JrrInitV2, adding javassist here
+      */
     addJrrStarterLib,
+    /**
+     used in JrrInitV2
+     */
     checks,
+    /**
+     used in JrrInit3
+     */
     setNextPhase,
+    /**
+     No custom script set
+     */
     jrrUtilsPhaseDone;
 
 
