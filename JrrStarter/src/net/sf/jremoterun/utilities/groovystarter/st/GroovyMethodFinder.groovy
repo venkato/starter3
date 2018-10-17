@@ -51,12 +51,17 @@ public class GroovyMethodFinder {
                 printSelfHelp.onMethodNotFound();
             }
             List<Method> methods1 = findAvailableMethods(onObject, false);
-            String msg = "wrong method ${methodName}, available : " + convertMethodsNamesToString(methods1)
+            String msg
+            if (methods1.size() == 0) {
+                msg = "wrong method ${methodName}, no public method available"
+            } else {
+                msg = "wrong method ${methodName}, available : " + convertMethodsNamesToString(methods1)
+            }
             throw new GroovyMethodFinderException(msg);
 
         }
         boolean printMethodsArgs = args2[0] == ConsoleSymbols.question.s
-        if(printMethodsArgs){
+        if (printMethodsArgs) {
             errorFound = true
             if (printSelfHelp != null) {
                 printSelfHelp.onMethodNotFound();
@@ -150,14 +155,24 @@ public class GroovyMethodFinder {
         } catch (GroovyMethodFinderException e) {
 //            println("arh size ${args.size()} , ${args}")
             if (args.size() == 0) {
-                if (onObject instanceof Script) {
-                    Script script = onObject as Script
-                    return script.run()
-                }
-                if (onObject instanceof Runnable) {
-                    Runnable runnable = onObject as Runnable
-                    runnable.run()
-                    return null;
+                if(onObject==null){
+                    log.severe("object is null, ${args}")
+                }else {
+                    String name34 = onObject.getClass().getName()
+                    try {
+                        if (onObject instanceof Script) {
+                            Script script = onObject as Script
+                            return script.run()
+                        }
+                        if (onObject instanceof Runnable) {
+                            Runnable runnable = (Runnable) onObject
+                            runnable.run()
+                            return null;
+                        }
+                    } catch (NullPointerException e2) {
+                        log.info "failed invoke ${name34} : ${e2}"
+                        throw e2
+                    }
                 }
             }
             throw e;
@@ -182,10 +197,10 @@ public class GroovyMethodFinder {
 
     List parseArgs(List<String> args2, Method method) {
         Type[] genericParameterTypes = method.getGenericParameterTypes()
-        List<Class> paramTypes = (List)method.parameterTypes.toList()
+        List<Class> paramTypes = (List) method.parameterTypes.toList()
         int i = 0
         List args3 = paramTypes.collect {
-            Object arg = args2[i]
+            String arg = args2[i]
             Type genericArg
             Class paramType = paramTypes[i]
             if (genericParameterTypes.length > 0) {

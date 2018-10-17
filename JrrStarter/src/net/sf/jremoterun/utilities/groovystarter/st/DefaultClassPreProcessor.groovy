@@ -36,16 +36,19 @@ class DefaultClassPreProcessor implements ClassPreProcessor {
 
     void detectAnnotationsOnMainCLass1(String className) {
         String classPath = className.replace('.', '/');
-        InputStream stream = GroovyMethodRunnerParams.instance.groovyClassLoader.getResourceAsStream(classPath + '.groovy');
+        InputStream stream = GroovyMethodRunnerParams.gmrpn.groovyClassLoader.getResourceAsStream(classPath + '.groovy');
         try {
             if (stream == null) {
-                stream = GroovyMethodRunnerParams.instance.groovyClassLoader.getResourceAsStream(classPath + '.class')
+                stream = GroovyMethodRunnerParams.gmrpn.groovyClassLoader.getResourceAsStream(classPath + '.class')
                 if (stream != null) {
                     javassistParseAndLoad(stream);
                 }
             } else {
                 detectAnnotationsOnMainCLass2(stream.text)
             }
+        }catch (Throwable e){
+            log.log(Level.INFO, "failed parse annotaions for ${className}", e)
+            throw e;
         } finally {
             if (stream != null) {
                 try {

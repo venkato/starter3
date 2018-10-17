@@ -1,6 +1,7 @@
 package net.sf.jremoterun.utilities.groovystrans
 
 import groovy.transform.CompileStatic
+import net.sf.jremoterun.utilities.JrrClassUtils
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.FieldNode
@@ -63,7 +64,7 @@ class JrrCastTransform extends ClassCodeExpressionTransformer {
                 log.info("changing cast in : ${sourceUnit.name}, line : ${ce.lineNumber} , for : ${nestedExpression} . end")
                 ConstructorCallExpression constructorCallExpression = new ConstructorCallExpression(ce.type, nestedExpression);
 
-                ce.@expression = constructorCallExpression
+                JrrClassUtils.setFieldValue(ce,'expression', constructorCallExpression)
                 constructorCallExpression.transformExpression(this);
                 return constructorCallExpression
             }

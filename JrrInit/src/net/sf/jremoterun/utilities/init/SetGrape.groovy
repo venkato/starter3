@@ -15,13 +15,18 @@ class SetGrape implements Runnable {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
+    public static Boolean triedLoad
+    public static Boolean loadedFine
+
 
     @Override
     void run() {
+        triedLoad = true
         IvyDepResolver2 ivyDepResolver2 = MavenDefaultSettings.mavenDefaultSettings.mavenDependenciesResolver as IvyDepResolver2
         Ivy ivy = ivyDepResolver2.ivy
         GrapeIvy grapeIvy = new GrapeIvy()
         JrrClassUtils.setFieldValue(grapeIvy, 'ivyInstance', ivy)
         JrrClassUtils.setFieldValue(Grape, 'instance', grapeIvy)
+        loadedFine = true
     }
 }
