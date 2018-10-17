@@ -19,12 +19,12 @@ class JrrInit3 implements Runnable {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
-    GroovyMethodRunnerParams gmrp = GroovyMethodRunnerParams.instance
-
-    static ClRef setDepResolver = new ClRef('net.sf.jremoterun.utilities.init.SetDependecyResolver')
 
 
-    private static CreationInfo inited
+    public static ClRef setDepResolver = new ClRef('net.sf.jremoterun.utilities.init.SetDependecyResolver')
+
+
+    private static volatile CreationInfo inited
 
     @Override
     void run() {
@@ -35,6 +35,7 @@ class JrrInit3 implements Runnable {
             // AlreadyInited.alreadyInited(inited,this)
             return
         }
+        GroovyMethodRunnerParams gmrp = GroovyMethodRunnerParams.gmrpn
         JdkLogFormatter.setLogFormatter()
 //        log.info "cp3"
         gmrp.addL(JrrRunnerPhase.setNextPhase, false, this.&f2)
@@ -45,8 +46,6 @@ class JrrInit3 implements Runnable {
 
     void f2() {
         new GroovyMethodRunner2().run()
-//        f1()
-//        checkIfIdea()
     }
 
 

@@ -19,6 +19,11 @@ class ProxyOutputStream2 extends FilterOutputStream{
         return out;
     }
 
+    @Override
+    void write(byte[] b, int off, int len) throws IOException {
+        getNestedOut().write(b, off, len)
+    }
+
     void setNestedOut(OutputStream outNew){
         synchronized (this){
             this.out = outNew

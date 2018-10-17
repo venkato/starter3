@@ -13,21 +13,40 @@ class CopyFileUtil {
     static void copyFileIfNeeded(File src, File dest) {
         assert src.exists()
         assert dest.parentFile.exists()
-        boolean needed = false;
-        if (!needed) {
-            needed = !dest.exists()
+        boolean needCopy = false;
+        if (!needCopy) {
+            needCopy = !dest.exists()
         }
-        if (!needed) {
-            needed = src.length() != dest.length()
+
+        if (!needCopy) {
+            needCopy = !isFilesSame(src,dest)
         }
-        if (!needed) {
-            needed = src.lastModified() != dest.lastModified()
-        }
-        if (needed) {
+//        if (!needCopy) {
+//            needCopy = src.length() != dest.length()
+//        }
+//        if (!needCopy) {
+//            needCopy = src.lastModified() != dest.lastModified()
+//        }
+        if (needCopy) {
             log.info("coping ${src} to ${dest}")
             dest.bytes = src.bytes
             dest.setLastModified(src.lastModified())
         }
+    }
+
+    static boolean isFilesSame(File src, File dest) {
+        if(!dest.exists()){
+            return false
+        }
+        if (src.length() != dest.length()) {
+            return false
+        }
+        int h1 = java.util.Arrays.hashCode(src.bytes)
+        int h2 = java.util.Arrays.hashCode(dest.bytes)
+        if(h1!=h2){
+            return false
+        }
+        return true
     }
 
 

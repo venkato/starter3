@@ -13,7 +13,7 @@ import java.util.logging.Logger
 @CompileStatic
 class JrrCastRuntime implements Runnable {
 
-    private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
+    private static final Logger log = Logger.getLogger(JrrCastRuntime.getName());
 
     @Override
     void run() {
