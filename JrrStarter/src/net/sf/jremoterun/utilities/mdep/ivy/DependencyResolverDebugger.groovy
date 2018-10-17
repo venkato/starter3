@@ -7,6 +7,7 @@ import org.apache.ivy.core.cache.RepositoryCacheManager;
 import org.apache.ivy.core.module.descriptor.Artifact
 import org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor;
 import org.apache.ivy.core.module.descriptor.DependencyDescriptor
+import org.apache.ivy.core.module.descriptor.MDArtifact
 import org.apache.ivy.core.module.descriptor.ModuleDescriptor;
 import org.apache.ivy.core.module.id.ModuleRevisionId;
 import org.apache.ivy.core.report.ArtifactDownloadReport;
@@ -41,6 +42,7 @@ class DependencyResolverDebugger implements DependencyResolver{
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
+    public static JrrDependecyAmender dependecyAmender = new JrrDependecyAmender();
 
     DependencyResolver dependencyResolver;
     IBiblioResolver ibiblio
@@ -90,8 +92,23 @@ class DependencyResolverDebugger implements DependencyResolver{
             dr = ibiblio.getDependency(dd, data)
             log.info "after retry : ${dr}"
         }
+        return dependecyAmender.amendIfNeeded(dr,dd,data)
 //        Thread.sleep(Long.MAX_VALUE)
-//        log.info "${dd} ${dr}"
+//        DefaultModuleDescriptor defaultModuleDescriptor1 = dr.getDescriptor() as DefaultModuleDescriptor;
+//        Collection<Artifact> artifacts =  (Collection)JrrClassUtils.getFieldValue(defaultModuleDescriptor1,'artifacts')
+//        artifacts.each {
+//            org.apache.ivy.core.module.descriptor.MDArtifact mdArtifact = it as MDArtifact;
+//            mdArtifact.getId()
+//            ModuleRevisionId moduleRevisionId1 = mdArtifact.getModuleRevisionId()
+//            if(moduleRevisionId1.organisation=='javax.ws.rs'){
+//                log.info "set jar for ${mdArtifact} .. ${moduleRevisionId1} from ${dd} by ${dr}"
+//                JrrClassUtils.setFieldValue(mdArtifact,'ext','jar');
+//            }
+//        }
+//        List<Artifact> list1 = artifacts.toList()
+//        List<Class<? extends Artifact>> unique1 = list1.collect { it.getClass() }.unique()
+//        log.info "${dd} ${list1} ${unique1} needel"
+//        log.info "${dd} ${dr} ${dr.getDescriptor()} ${dr.getDescriptor().getClass()} needel"
 //        log.info "${dr.class.name}"
 //        log.info "${dr.descriptor}"
 //        log.info "${dr.descriptor.class.name}"
@@ -201,7 +218,7 @@ class DependencyResolverDebugger implements DependencyResolver{
             List subresolvers = ((ChainResolver) dependencyResolver).getResolvers();
             for (Iterator iter = subresolvers.iterator(); iter.hasNext();) {
                 DependencyResolver dr = (DependencyResolver) iter.next();
-                assert dr.name!=null
+                assert dr.getName()!=null
                 ivySettings.addResolver(dr);
             }
         } else if (dependencyResolver instanceof DualResolver) {

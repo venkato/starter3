@@ -1,4 +1,4 @@
-package net.sf.jremoterun.utilities.nonjdk.firstdownload.specclassloader
+package net.sf.jremoterun.utilities.nonjdk.firstdownload.starter
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
@@ -14,7 +14,6 @@ class CloneGitRepo3 {
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
     private static String gitDirSuffix = "git_download_"
-    private static String fileSuffix = "file_"
 
     File gitBaseDir
     File gitTmpDir
@@ -27,20 +26,20 @@ class CloneGitRepo3 {
         assert gitTmpDir.exists()
     }
 
-    File cloneGitRepo3(String src) {
+    File cloneGitRepo3(String src,String branch1) {
         String dirSuffix = createGitRepoSuffix(src)
         File toDir3 = new File(gitBaseDir, dirSuffix + '/git')
-        cloneGitRepo4(src, toDir3);
+        cloneGitRepo4(src, toDir3,branch1);
         return toDir3;
     }
 
-    void cloneGitRepo4(String src, File toDir3) {
+    void cloneGitRepo4(String src, File toDir3,String branch1) {
         if (toDir3.exists() && toDir3.listFiles().length > 0) {
             log.info("already downloaded ${src}")
         } else {
             File tmpGitDir = findGitDownloadDir();
             tmpGitDir.mkdir()
-            cloneGitRepo(tmpGitDir, src)
+            cloneGitRepo(tmpGitDir, src,branch1)
             if (toDir3.exists()) {
                 assert toDir3.deleteDir()
             }
@@ -67,15 +66,7 @@ class CloneGitRepo3 {
         throw new Exception("can't find free dir in ${gitTmpDir}")
     }
 
-    static void cleanDir(File toDir) {
-        if (toDir.exists()) {
-            toDir.deleteDir()
-        }
-        toDir.mkdirs()
-        assert toDir.exists()
-        assert toDir.listFiles().length == 0
 
-    }
 
     static String createGitRepoSuffix(String src) {
         if (src.endsWith('.git')) {
@@ -89,23 +80,21 @@ class CloneGitRepo3 {
         return dirSuffix
     }
 
-    static File cloneGitRepo2(File gitDownloadDir, String src) {
-        assert gitDownloadDir.exists()
-        String dirSuffix = createGitRepoSuffix(src)
-        File toDir = new File(gitDownloadDir, dirSuffix)
-        cleanDir(toDir)
-        cloneGitRepo(toDir, src)
-        return toDir
-    }
+    public static boolean cloneSubModules = true
 
-    static void cloneGitRepo(File toDir, String src) {
+
+    static void cloneGitRepo(File toDir, String src,String branch1) {
+        if(src.contains(' ')){
+            throw new Exception("Repo contains spaces : ${src}")
+        }
         log.info "downloading ${src}"
         assert toDir.parentFile.exists()
         if (toDir.exists()) {
             assert toDir.listFiles().length == 0
         }
         CloneCommand cloneCommand = Git.cloneRepository()
-        cloneCommand.branch = 'master'
+        cloneCommand.setCloneSubmodules(cloneSubModules)
+        cloneCommand.branch = branch1
         cloneCommand.setURI(src)
         File gitDir = new File(toDir, ".git");
         cloneCommand.setGitDir(gitDir)
