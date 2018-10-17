@@ -2,30 +2,25 @@ package net.sf.jremoterun.utilities.mdep.ivy
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 import net.sf.jremoterun.utilities.classpath.MavenDefaultSettings
 import net.sf.jremoterun.utilities.classpath.MavenDependenciesResolver
 import net.sf.jremoterun.utilities.classpath.MavenId
 import net.sf.jremoterun.utilities.classpath.MavenPath
-import org.apache.ivy.Ivy
+import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
 import org.apache.ivy.core.module.descriptor.DefaultDependencyDescriptor
 import org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor
-import org.apache.ivy.core.module.descriptor.ModuleDescriptor
-import org.apache.ivy.core.module.id.ModuleId
 import org.apache.ivy.core.module.id.ModuleRevisionId
+import org.apache.ivy.core.report.ArtifactDownloadReport
 import org.apache.ivy.core.report.ResolveReport
-import org.apache.ivy.core.resolve.IvyNode
 import org.apache.ivy.core.resolve.ResolveOptions
 import org.apache.ivy.core.settings.IvySettings
-import org.apache.ivy.plugins.parser.m2.PomDependencyMgt
-import org.apache.ivy.plugins.parser.m2.PomModuleDescriptorBuilder
 import org.apache.ivy.plugins.resolver.ChainResolver
 import org.apache.ivy.plugins.resolver.DependencyResolver
 import org.apache.ivy.plugins.resolver.DualResolver
 import org.apache.ivy.plugins.resolver.FileSystemResolver
 import org.apache.ivy.plugins.resolver.IBiblioResolver
-import org.apache.ivy.util.DefaultMessageLogger
 
+import java.util.logging.Level
 import java.util.logging.Logger
 
 @CompileStatic
@@ -35,44 +30,25 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
 
     public static String defaultS = 'default'
     public static String sourcesS = 'sources'
+    //public String logResolveOption = LogOptions.LOG_DEFAULT
 
-    Ivy ivy;
+    JrrIvy ivy;
 
-    static File userHome = System.getProperty("user.home") as File
+    public static File userHome = System.getProperty("user.home") as File
 
     public ChainResolver chainResolver;
-    int log1 = org.apache.ivy.util.Message.MSG_INFO;
-    String log2 = ResolveOptions.LOG_DOWNLOAD_ONLY;
+    public static int log1Default = org.apache.ivy.util.Message.MSG_WARN;
+    public static String log2Default = ResolveOptions.LOG_DOWNLOAD_ONLY;
+    int log1 = log1Default;
+    String log2 = log2Default;
     DependencyResolverDebugger dependencyResolverDebugger;
-    IvySettings ivySettings;
+    JrrIvySettings ivySettings;
 //    ResolutionCacheDebugManager resolutionCacheDebugManager = new ResolutionCacheDebugManager();
 
-    IBiblioResolver failBackDr;
+    JrrBiblioResolver failBackDr;
     JrrDefaultResolutionCacheManager resolutionCacheManager;
 
-    DefaultMessageLogger defaultMessageLogger = new DefaultMessageLogger(log1) {
-        @Override
-        void log(String msg, int level) {
-            super.log(msg, level)
-            if (level <= this.level) {
-//                    Thread.dumpStack()
-            }
-        }
-
-        @Override
-        void debug(String msg) {
-//                if (msg.contains('resolver not found:')) {
-//                    super.error(msg)
-//                } else {
-            super.debug(msg)
-//                }
-        }
-
-        @Override
-        void error(String msg) {
-            super.error(msg)
-        }
-    }
+    JrrIvyMessageLogger defaultMessageLogger = new JrrIvyMessageLogger(log1);
 
     List<DependencyResolver> customRepos = []
 
@@ -112,7 +88,7 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
             setDepResolverImpl()
             return true
         } else {
-            log.info "dependcy resolver already set : ${MavenDefaultSettings.mavenDefaultSettings.mavenDependenciesResolver}"
+            log.info "dependency resolver already set : ${MavenDefaultSettings.mavenDefaultSettings.mavenDependenciesResolver}"
             return false
         }
     }
@@ -122,24 +98,15 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
         initIvySettingsImpl(ivySettings)
     }
 
-    private boolean defaultResolverSet = false;
+//    private boolean defaultResolverSet = false;
 
-    IvySettings buildSettings() {
+    JrrIvySettings buildSettings() {
 
         org.apache.ivy.util.Message.setDefaultLogger(defaultMessageLogger)
-        ivySettings = new IvySettings() {
-            @Override
-            void setDefaultResolver(String resolverName) {
-                if (defaultResolver) {
-                    log.info "default resolver already set, ignore default ${resolverName}"
-                } else {
-                    super.setDefaultResolver(resolverName)
-                }
-            }
-        };
+        ivySettings = new JrrIvySettings();
 //        log.info "cp1"
         File cache = getIvyCachDir()
-        JrrUtilities3.checkFileExist(cache)
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(cache)
 //        FileUtils.deleteQuietly(cache)
 //        cache.mkdir()
         ivySettings.setDefaultCache(cache);
@@ -185,8 +152,8 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
     }
 
 
-    void initIvySettingsImpl(IvySettings ivySettings) {
-        ivy = Ivy.newInstance(ivySettings);
+    void initIvySettingsImpl(JrrIvySettings ivySettings) {
+        ivy = ivySettings.buildIvy()
 //        log.info "cp1"
         ivy.getLoggerEngine().pushLogger(defaultMessageLogger)
 //        log.info "cp2"
@@ -268,12 +235,12 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
     }
 
     File getIvyCachDir() {
-        return MavenDefaultSettings.mavenDefaultSettings.grapeLocalDir;
+        return MavenDefaultSettings.mavenDefaultSettings.grapeFileFinder.getMavenLocalDir2();
     }
 
     IBiblioResolver buildBintray() {
         // https://jitpack.io/
-        IBiblioResolver local = new IBiblioResolver();
+        IBiblioResolver local =  new JrrBiblioResolver();
         local.m2compatible = false
 //        local.usepoms = true
         local.root = 'https://jcenter.bintray.com/'
@@ -282,13 +249,13 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
     }
 
     IBiblioResolver buildPublicIbiblio() {
-        IBiblioResolver local = buildPublicIbiblioCustom('ibiblio', MavenDefaultSettings.mavenDefaultSettings.mavenServer);
+        JrrBiblioResolver local = buildPublicIbiblioCustom('ibiblio', MavenDefaultSettings.mavenDefaultSettings.mavenServer);
         failBackDr = local
         return local
     }
 
-    IBiblioResolver buildPublicIbiblioCustom(String name, String root) {
-        IBiblioResolver local = new IBiblioResolver();
+    JrrBiblioResolver buildPublicIbiblioCustom(String name, String root) {
+        JrrBiblioResolver local = new JrrBiblioResolver();
 //        local.setCheckconsistency(false)
 //        local.setCache(null)
         local.root = root
@@ -299,8 +266,8 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
     }
 
 
-    IBiblioResolver buildLocalMavenRepo() {
-        IBiblioResolver local = new IBiblioResolver();
+    JrrBiblioResolver buildLocalMavenRepo() {
+        JrrBiblioResolver local =  new JrrBiblioResolver();
         local.name = 'localm2'
         local.root = getMavenLocalDir().toURL().toString()
         local.m2compatible = true
@@ -346,11 +313,31 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
     }
 
     @Override
+    List<MavenId> resolveAndDownloadDeepDependencies(MavenId mavenId, boolean downloadSource, boolean dep, IBiblioRepository repo) {
+        if (repo != null) {
+            throw new UnsupportedOperationException("loading from custom repo not supported : ${repo}")
+        }
+        return resolveAndDownloadDeepDependencies(mavenId, downloadSource, dep)
+    }
+
+    void downloadDeepDependenciesSpec(MavenId mavenId, boolean dep, String ext) {
+        downloadDeepDependenciesSpec(mavenId, dep, mavenId.artifactId, ext)
+    }
+
+    void downloadDeepDependenciesSpec(MavenId mavenId, boolean dep, String name, String ext) {
+        List<MavenId> downloaded = []
+        ResolveReport resolveReport = downloadIvyImpl(mavenId, dep, downloaded, name, ext)
+        if (resolveReport.hasError()) {
+            throw handledFailedDownload(mavenId, dep, resolveReport)
+        }
+    }
+
+    @Override
     List<MavenId> resolveAndDownloadDeepDependencies(MavenId mavenId, boolean downloadSource3, boolean dep) {
         List<MavenId> downloaded = []
-        ResolveReport resolveReport = downloadIvyImpl(mavenId, dep, downloaded)
+        ResolveReport resolveReport = downloadIvyImpl(mavenId, dep, downloaded, mavenId.artifactId, mavenId.modification)
         if (resolveReport.hasError()) {
-            throw new IvyDepResolverException(resolveReport);
+            throw handledFailedDownload(mavenId, dep, resolveReport)
         }
 
         downloaded = downloaded.unique()
@@ -364,27 +351,52 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
         return downloaded
     }
 
+    Throwable handledFailedDownload(MavenId mavenId, boolean dep, ResolveReport resolveReport) {
+        Collection<Exception> excs = resolveReport.getDependencies().collect {
+            if (it instanceof org.apache.ivy.core.resolve.IvyNode) {
+                org.apache.ivy.core.resolve.IvyNode ivyNode = (org.apache.ivy.core.resolve.IvyNode) it;
+                return ivyNode.getProblem()
+            }
+            return null
+        }.findAll { it != null }
+        if (excs.size() == 1 && resolveReport.getAllProblemMessages().size() == 1) {
+            Exception get1 = excs.get(0)
+            return new IvyDepResolverException("failed resolve ${mavenId}", get1)
 
-    DefaultModuleDescriptor prepare(MavenId mavenId, String depConf, boolean dep, ResolveOptions ro) {
+        }
+        if (excs.size() > 0) {
+            excs.each { log.log(Level.WARNING, "failed download ${mavenId}", it) }
+        }
+        return new IvyDepResolverException(resolveReport);
+    }
+
+    DefaultModuleDescriptor prepare(MavenId mavenId, String depConf, boolean dep, ResolveOptions ro, String name, String ext) {
         String[] confs = [IvyDepResolver2.defaultS]
         ro.setConfs(confs)
         ro.setLog(log2)
         ro.setTransitive(true);
         ro.setDownload(true);
         ModuleRevisionId moduleRevisionId
-        if (mavenId.modification == null) {
-            moduleRevisionId = ModuleRevisionId.newInstance(mavenId.groupId, mavenId.artifactId + "-envelope", mavenId.version)
-        } else {
-            moduleRevisionId = ModuleRevisionId.newInstance(mavenId.groupId, mavenId.artifactId + "-envelope", mavenId.modification, mavenId.version)
-        }
+//        if (mavenId.modification == null) {
+        moduleRevisionId = ModuleRevisionId.newInstance(mavenId.groupId, mavenId.artifactId + "-envelope", mavenId.version)
+//        } else {
+//            moduleRevisionId = ModuleRevisionId.newInstance(mavenId.groupId, mavenId.artifactId + "-envelope", mavenId.modification, mavenId.version)
+//        }
         DefaultModuleDescriptor md = DefaultModuleDescriptor.newDefaultInstance(moduleRevisionId);
         ModuleRevisionId ri
-        if (mavenId.modification == null) {
-            ri = ModuleRevisionId.newInstance(mavenId.groupId, mavenId.artifactId, mavenId.version);
-        } else {
-            ri = ModuleRevisionId.newInstance(mavenId.groupId, mavenId.artifactId,mavenId.modification,  mavenId.version);
-        }
+//        if (mavenId.modification == null) {
+        ri = ModuleRevisionId.newInstance(mavenId.groupId, mavenId.artifactId, mavenId.version);
+//        } else {
+//            ri = ModuleRevisionId.newInstance(mavenId.groupId, mavenId.artifactId,mavenId.modification,  mavenId.version);
+//        }
         DefaultDependencyDescriptor dd = new DefaultDependencyDescriptor(md, ri, false, false, dep);
+//        dd.addExcludeRule(dep)
+        // log4j-1.2.16.zip
+        // name-1.2.16.zip
+        if (ext != null) {
+            DefaultDependencyArtifactDescriptor dad = new DefaultDependencyArtifactDescriptor(dd, name, ext, ext, null, null)
+            dd.addDependencyArtifact(IvyDepResolver2.defaultS, dad)
+        }
         dd.addDependencyConfiguration(IvyDepResolver2.defaultS, depConf);
 //        if (downloadSource) {
 //            dd.addDependencyConfiguration(IvyDepResolver2.defaultS, 'sources');
@@ -396,52 +408,37 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
         return md;
     }
 
-    ResolveReport downloadIvyImpl(MavenId mavenId, boolean dep, List<MavenId> downloaded) {
+    public static volatile boolean tryVariant = true
+
+
+    ResolveReport downloadIvyImpl(MavenId mavenId, boolean dep, List<MavenId> downloaded, String name, String ext) {
         if (ivy == null) {
             throw new NullPointerException('ivy is null')
         }
         ResolveOptions ro = new ResolveOptions();
-        DefaultModuleDescriptor md = prepare(mavenId, IvyDepResolver2.defaultS, dep, ro)
+        DefaultModuleDescriptor md = prepare(mavenId, IvyDepResolver2.defaultS, dep, ro, name, ext)
         ResolveReport rr = ivy.resolve(md, ro);
-//        if (rr.hasError()) {
-//            rr.getAllProblemMessages().each {
-//                java.lang.Object obj = it
-//                log.info "${obj.class.name} ${obj}"
-//            }
-//            throw new IvyDepResolverException(rr)
-////            throw new RuntimeException(rr.getAllProblemMessages().toString());
-//        }
+        if(rr.hasError()){
+            if(tryVariant &&  ext!=null){
+                ResolveReport rr2= downloadIvyImpl(mavenId,dep,downloaded,name,null);
+                if(!rr.hasError()){
+                    return rr2
+                }
+            }
+            return rr;
+        }
         List<MavenId> mavenIds = rr.getAllArtifactsReports().toList().collect {
-//            log.info "${it.localFile}"
-            ModuleRevisionId r = it.artifact.moduleRevisionId
-            new MavenId(r.organisation, r.name, r.revision,r.branch)
+            return convertArtifactDownloadReport2MavenId(it)
         }
         downloaded.addAll(mavenId)
         downloaded.addAll(mavenIds)
-        if (false) {
-            List<MavenId> additionalDeps = []
-            log.info "cp1 = ${rr.dependencies.size()}"
-            rr.dependencies.each { Object ivyNode2 ->
-                IvyNode ivyNode = ivyNode2 as IvyNode
-                ModuleDescriptor descriptor = ivyNode.descriptor;
-                log.info "${descriptor}"
-                if (descriptor instanceof PomModuleDescriptorBuilder.PomModuleDescriptor) {
-                    PomModuleDescriptorBuilder.PomModuleDescriptor desc = (PomModuleDescriptorBuilder.PomModuleDescriptor) descriptor;
-                    Map<ModuleId, PomDependencyMgt> map = desc.dependencyManagementMap as Map<ModuleId, PomDependencyMgt>
-                    List<PomDependencyMgt> deps = map.collect { it.value };
-                    deps = deps.findAll { it.scope != 'test' }
-                    additionalDeps.addAll(deps.collect { new MavenId(it.groupId, it.artifactId, it.version) })
-                }
-            }
-            additionalDeps = additionalDeps - downloaded
-            log.info "additionalDeps : ${additionalDeps}"
-            additionalDeps.each {
-                if (!downloaded.contains(it)) {
-                    downloadIvyImpl(it, true, downloaded)
-                }
-            }
-        }
         return rr;
+    }
+
+
+    MavenId convertArtifactDownloadReport2MavenId(ArtifactDownloadReport adr){
+        ModuleRevisionId r = adr.getArtifact().getModuleRevisionId();
+        return new MavenId(r.organisation, r.name, r.revision, r.branch)
     }
 
     @Override
@@ -449,27 +446,44 @@ class IvyDepResolver2 implements MavenDependenciesResolver {
         downloadCustomPackage(mavenId, sourcesS)
     }
 
-    void downloadCustomPackage(MavenId mavenId, String packageId) {
+    @Override
+    void downloadSource(MavenId mavenId, IBiblioRepository repo) {
+        if (repo != null) {
+            throw new UnsupportedOperationException("loading from custom repo not supported ${repo}")
+        }
+        downloadSource(mavenId)
+    }
+
+    ResolveReport downloadCustomPackage(MavenId mavenId, String packageId) {
         ResolveOptions ro = new ResolveOptions();
-        DefaultModuleDescriptor md = prepare(mavenId, packageId, false, ro)
+        DefaultModuleDescriptor md = prepare(mavenId, packageId, false, ro, null, null)
         ResolveReport rr = ivy.resolve(md, ro);
         if (rr.hasError()) {
 //            rr.getAllProblemMessages().each {
 //                java.lang.Object obj = it
 //                log.info "${obj.class.name} ${obj}"
 //            }
-            throw new RuntimeException(rr.getAllProblemMessages().toString());
+            throw handledFailedDownload(mavenId, false, rr)
+            //throw new RuntimeException(rr.getAllProblemMessages().toString());
         }
-        List<MavenId> mavenIds = rr.getAllArtifactsReports().toList().collect {
-            log.info "${it.localFile}"
-            ModuleRevisionId r = it.artifact.moduleRevisionId
-            new MavenId(r.organisation, r.name, r.revision)
-        }
+//        List<MavenId> mavenIds = rr.getAllArtifactsReports().toList().collect {
+//            log.info "${it.localFile}"
+//            ModuleRevisionId r = it.artifact.moduleRevisionId
+//            new MavenId(r.organisation, r.name, r.revision)
+//        }
+        return rr;
     }
+
+    List<File> extractFilesFromReport(ResolveReport rr){
+        ArtifactDownloadReport[] ar = rr.getAllArtifactsReports()
+        List<File> files = ar.toList().collect { it.getLocalFile() }
+        return files
+    }
+
 
     @Override
     File getMavenLocalDir() {
-        return MavenDefaultSettings.mavenDefaultSettings.mavenLocalDir
+        return MavenDefaultSettings.mavenDefaultSettings.mavenFileFinder.getMavenLocalDir2()
     }
 
     @Override

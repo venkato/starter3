@@ -6,6 +6,7 @@ import net.sf.jremoterun.utilities.classpath.AddFilesToClassLoaderGroovy
 
 import java.util.logging.Logger
 
+@Deprecated
 @CompileStatic
 abstract class ClasspathConfigurator extends GroovyConfigLoader<AddFilesToClassLoaderGroovy> {
 
