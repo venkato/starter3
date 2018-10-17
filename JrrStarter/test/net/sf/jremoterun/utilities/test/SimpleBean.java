@@ -2,11 +2,8 @@ package net.sf.jremoterun.utilities.test;
 
 import java.util.logging.Logger;
 
-import sun.reflect.Reflection;
-
 public class SimpleBean implements SimpleBeanMBean {
-	private static final Logger log = Logger.getLogger(Reflection
-			.getCallerClass(1).getName());
+	private static final Logger log = Logger.getLogger(SimpleBean.class);
 
 	public static int someAttributeStatic = 3;
 

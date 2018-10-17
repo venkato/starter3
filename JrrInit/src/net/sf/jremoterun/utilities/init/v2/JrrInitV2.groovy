@@ -19,34 +19,31 @@ import net.sf.jremoterun.utilities.init.commonrunner.CommonRunner
 import net.sf.jremoterun.utilities.init.commonrunner.CommonRunner2
 import net.sf.jremoterun.utilities.init.commonrunner.RunnerInterface
 import net.sf.jremoterun.utilities.init.utils.AlreadyInited
+import net.sf.jremoterun.utilities.java11.sep1.Java11ModuleAccessF
 
 import javax.swing.SwingUtilities
 import java.util.logging.Logger
 
 /**
  * Called from
- * @SeeAlso net.sf.jremoterun.utilities.init.commonrunner.CommonRunner2
+ * @see net.sf.jremoterun.utilities.init.commonrunner.CommonRunner2
  */
 @CompileStatic
 class JrrInitV2 implements RunnerInterface {
 
-    private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
+    //private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
-    GroovyMethodRunnerParams gmrp = GroovyMethodRunnerParams.instance
+    GroovyMethodRunnerParams gmrp = GroovyMethodRunnerParams.createInstance()
 
-    public static boolean setSystemClassLoader = true;
+    public static ClRef checkCoreClassesLoaded = new ClRef('net.sf.jremoterun.utilities.init.JrrCheckBaseClassExists')
+    public static ClRef setDepResolver = new ClRef('net.sf.jremoterun.utilities.init.JrrInit3')
 
-    public static String showExceptionInSwingWindow = "exception.swing";
-    public
-    static boolean showExceptionInSwingWindowValue = "true".equalsIgnoreCase(System.getProperty(showExceptionInSwingWindow));
+    public static ClRef fieldAccessorSetter = new ClRef('net.sf.jremoterun.utilities.JrrFieldAccessorSetter')
 
-    static ClRef setDepResolver = new ClRef('net.sf.jremoterun.utilities.init.JrrInit3')
+//    @Deprecated
+//    public static ClRef groovyCastImproved = new ClRef('net.sf.jremoterun.utilities.groovystrans.JrrCastASTTransformation')
 
-    static ClRef fieldAccessorSetter = new ClRef('net.sf.jremoterun.utilities.JrrFieldAccessorSetter')
 
-    static ClRef groovyCastImproved = new ClRef('net.sf.jremoterun.utilities.groovystrans.JrrCastASTTransformation')
-
-    public static boolean setClassLoaderForSwingThread = true
 
     private static CreationInfo inited
 
@@ -54,12 +51,12 @@ class JrrInitV2 implements RunnerInterface {
     void jrrRunScript() {
         preRun()
         List<String> argsCopy = new ArrayList<>(CommonRunner.args)
-        new GroovyMethodRunner().jrrRunScript(CommonRunner.initialScript2, argsCopy)
+        new GroovyMethodRunner(gmrp).jrrRunScript(CommonRunner.initialScript2, argsCopy)
     }
 
     void setIfSwing() {
-        if (showExceptionInSwingWindowValue || CommonRunner2.isUsedJavaw) {
-            gmrp.showExceptionInSwingWindowV = showExceptionInSwingWindowValue
+        if (JrrV2Settings.showExceptionInSwingWindowValue || CommonRunner2.isUsedJavaw) {
+            gmrp.showExceptionInSwingWindowV = JrrV2Settings.showExceptionInSwingWindowValue
             gmrp.onExceptionOccured = new ShowExceptionInSwingHandler();
         }
     }
@@ -75,8 +72,9 @@ class JrrInitV2 implements RunnerInterface {
             AlreadyInited.alreadyInited(inited, this)
             return
         }
+        Java11ModuleAccessF.disableJavaModuleCheckIfNeeded();
         RunnableFactory.runRunner fieldAccessorSetter
-        RunnableFactory.runRunner groovyCastImproved
+        //RunnableFactory.runRunner groovyCastImproved
         // don't change to 'addL'
         gmrp.getListeners(JrrRunnerPhase.argsSet, false).add(this.&preRun2)
     }
@@ -84,17 +82,19 @@ class JrrInitV2 implements RunnerInterface {
     void preRun2() {
         JdkLogFormatter.setLogFormatter()
 //        gmrp.preparedClassName = GroovyMethodRunner2.name
-        gmrp.addL(JrrRunnerPhase.addJrrStarterLib, false, DownloadDropShip2.&addJavassist)
-        gmrp.addL(JrrRunnerPhase.checks, false, new JrrStarterChecks())
         gmrp.addL(JrrRunnerPhase.createGroovyClassLoader, false, this.&setSystemClassLoaderM)
+        gmrp.addL(JrrRunnerPhase.addJrrStarterLib, false, new DownloadDropShip2())
+        gmrp.addL(JrrRunnerPhase.addJrrStarterLib, false, checkCoreClassesLoaded)
+
         gmrp.addL(JrrRunnerPhase.addJrrStarterLib, false, setDepResolver)
+        gmrp.addL(JrrRunnerPhase.checks, false, new JrrStarterChecks())
 
         gmrp.jrrUtilsPhaseDoneAfter = JrrRunnerPhase2.afterCoreLibAdded
     }
 
 
     void setSystemClassLoaderM() {
-        if (setSystemClassLoader) {
+        if (JrrV2Settings.setSystemClassLoader) {
             setSystemClassLoaderImpl()
         }
     }
@@ -108,7 +108,7 @@ class JrrInitV2 implements RunnerInterface {
         SimpleFindParentClassLoader.setDefaultClassLoader(groovyClassLoader)
         Thread thread2 = Thread.currentThread()
         thread2.setContextClassLoader(groovyClassLoader)
-        if (setClassLoaderForSwingThread) {
+        if (JrrV2Settings.setClassLoaderForSwingThread) {
             SwingUtilities.invokeLater {
                 Thread thread = Thread.currentThread()
                 thread.setContextClassLoader(groovyClassLoader)
