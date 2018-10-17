@@ -10,10 +10,11 @@ import org.codehaus.groovy.transform.ASTTransformation
 
 import java.util.logging.Logger
 
+@Deprecated
 @CompileStatic
 class JrrCastASTTransformation implements ASTTransformation, Runnable {
 
-    private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
+    private static final Logger log = Logger.getLogger(JrrCastASTTransformation.getName());
 
     static ClRef clRef = new ClRef("net.sf.jremoterun.utilities.nonjdk.langi.JrrStaticCompileTransformation")
 

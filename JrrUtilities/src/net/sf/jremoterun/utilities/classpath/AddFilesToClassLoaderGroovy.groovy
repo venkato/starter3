@@ -2,7 +2,8 @@ package net.sf.jremoterun.utilities.classpath
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
+import net.sf.jremoterun.utilities.groovystarter.ClasspathConfigurator2
+import net.sf.jremoterun.utilities.groovystarter.GroovyConfigLoader2I
 import net.sf.jremoterun.utilities.groovystarter.GroovyMethodRunner
 import net.sf.jremoterun.utilities.groovystarter.GroovyMethodRunnerParams
 
@@ -19,17 +20,28 @@ public abstract class AddFilesToClassLoaderGroovy extends AddFilesToClassLoaderC
     List<File> addedGroovyClassPathFiles = []
 
     void addFromGroovyFile(File file) {
-        JrrUtilities3.checkFileExist(file)
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
 //        Thread.dumpStack()
         if (addedGroovyClassPathFiles.contains(file)) {
             log.info "${file} already added"
         } else {
-            file = file.absoluteFile.canonicalFile
+            file = file.getAbsoluteFile().getCanonicalFile()
             assert groovyScriptRunner != null
             groovyScriptRunner.addFilesToClassLoaderF(file, this);
             log.fine "added files count : ${addedFiles2.size()}"
             addedGroovyClassPathFiles.add(file)
         }
+    }
+
+
+    void addFromGroovyTextFile(String groovyFileContent, String scriptName) {
+        assert groovyScriptRunner != null
+//        Script script1 = groovyScriptRunner.createScriptClass(groovyFileContent, scriptName, this)
+        Class scriptClass = groovyScriptRunner.createScriptClass(groovyFileContent, scriptName)
+        Object script = scriptClass.newInstance();
+        groovyScriptRunner.runScript(script,this)
+        //Script script = createScript(scriptSource, scriptName, addCl);
+        //script1.run()
     }
 
 
@@ -41,5 +53,11 @@ public abstract class AddFilesToClassLoaderGroovy extends AddFilesToClassLoaderC
         addAll(gmrp.addFilesToClassLoader.addedFiles2)
     }
 
+
+    void addFromGroovyFile(ToFileRef2 file) {
+        File f3 = file.resolveToFile()
+        assert f3 != null
+        addFromGroovyFile(f3)
+    }
 
 }
