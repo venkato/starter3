@@ -30,7 +30,7 @@ import net.sf.jremoterun.utilities.javassist.JavassistProxyFactory;
 
 public class JrrUtilititiesTest extends TestCase {
 
-	private static final Logger log = Logger.getLogger(JrrUtilities.getCurrentClass().getName());
+	private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
 	public void testThreadLocal() throws Exception {
 		Map<Thread, Object> findThreadLocalValues = ThreadUtils.findThreadLocalValues();

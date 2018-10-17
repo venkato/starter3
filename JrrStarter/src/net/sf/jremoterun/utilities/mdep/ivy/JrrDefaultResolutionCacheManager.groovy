@@ -24,20 +24,17 @@ class JrrDefaultResolutionCacheManager extends org.apache.ivy.core.cache.Default
     }
 
 
-    public ResolvedModuleRevision findModuleInCache(DependencyDescriptor dd,
-                                                    ModuleRevisionId requestedRevisionId, CacheMetadataOptions options,
-                                                    String expectedResolver) {
-        return null
-    }
+//    public ResolvedModuleRevision findModuleInCache(DependencyDescriptor dd,
+//                                                    ModuleRevisionId requestedRevisionId, CacheMetadataOptions options,
+//                                                    String expectedResolver) {
+//        return null
+//    }
 
     @Override
     protected ModuleDescriptorParser getModuleDescriptorParser(File ivyFile) {
         ModuleDescriptorParser parser =  super.getModuleDescriptorParser(ivyFile)
-//        ModuleDescriptor depMD = getMdFromCache(parser, options, ivyFile);
-//        String resolverName = getSavedResolverName(depMD);
-//        String artResolverName = getSavedArtResolverName(depMD);
-//        DependencyResolver resolver = settings.getResolver(resolverName);
-
         return parser
     }
+
+
 }

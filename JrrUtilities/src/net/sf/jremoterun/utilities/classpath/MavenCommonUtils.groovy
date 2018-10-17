@@ -2,7 +2,7 @@ package net.sf.jremoterun.utilities.classpath
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
+import net.sf.jremoterun.utilities.classpath.finders.GrapeFileFinder
 
 import java.util.logging.Logger
 ;
@@ -35,7 +35,7 @@ public class MavenCommonUtils {
         String file2 = url.toString();
         file2 = file2.replace("://", "/")
         if (file2.startsWith('/')) {
-            file2 = file2.substring(1)
+            file2 =  file2.substring(1)
         }
         file2 = file2.replace('%25','%')
         file2 = file2.replace('%20','-')
@@ -48,7 +48,7 @@ public class MavenCommonUtils {
     }
 
     File buildDownloadUrl(URL url) {
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.jrrDownloadDir);
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(mavenDefaultSettings.jrrDownloadDir);
         File file3 = new File(mavenDefaultSettings.jrrDownloadDir, buildDownloadUrlSuffix(url));
         return file3
     }
@@ -56,16 +56,18 @@ public class MavenCommonUtils {
     File downloadJarFromUrl(URL url) {
         File file3 = buildDownloadUrl(url)
         if (!file3.exists()) {
-            if (!file3.parentFile.exists()) {
-                assert file3.parentFile.mkdirs()
+            File parentFile3 = file3.getParentFile()
+            if (!parentFile3.exists()) {
+                parentFile3.mkdirs()
+                assert parentFile3.exists()
             }
-            file3.bytes = url.bytes
+            UrlBytesDownloader.defaultDownloader.downloadToFile(url,file3)
         }
         return file3
     }
 
     URL detectUrlFromFile(File file) {
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.jrrDownloadDir);
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(mavenDefaultSettings.jrrDownloadDir);
         assert isParent(mavenDefaultSettings.jrrDownloadDir, file)
         String parent = getPathToParent(mavenDefaultSettings.jrrDownloadDir, file)
 //        int i = parent.indexOf("/")
@@ -77,12 +79,7 @@ public class MavenCommonUtils {
     public static boolean overrideNewAlgouse = true;
 
    File findMavenPath(MavenPath mavenPath) {
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.mavenLocalDir)
-        File file = new File(mavenDefaultSettings.mavenLocalDir, mavenPath.buildMavenPath());
-        if (file.exists()) {
-            return file;
-        }
-        return null;
+       return mavenDefaultSettings.mavenFileFinder.findMavenPath(mavenPath)
     }
 
     /**
@@ -131,86 +128,29 @@ public class MavenCommonUtils {
             boolean bMoreReceint = mavenDefaultSettings.mavenVersionComparator.isOverrideMavenId2(mavenId, a, b)
             return bMoreReceint ? -1 : 1
         }
-        MavenId mavenIdLastest = new MavenId(mavenId.groupId, mavenId.artifactId, maxVersion);
+        MavenId mavenIdLastest = new MavenId(mavenId.groupId, mavenId.artifactId, maxVersion,mavenId.modification);
         assert findMavenOrGradle(mavenIdLastest) != null
         return mavenIdLastest
     }
 
+    @Deprecated
     List<String> findMavenAllVersions(MavenId mavenId) {
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.mavenLocalDir)
-        mavenId = mavenId.normalize()
-        String groupId = mavenId.groupId.replace('.', '/')
-        //"${groupId}/${artifactId}/${version}/${artifactId}-${version}.jar"
-        File file4 = new File(mavenDefaultSettings.mavenLocalDir, "${groupId}/${mavenId.artifactId}");
-        if (!file4.exists()) {
-            return []
-        }
-        File[] files3 = file4.listFiles()
-        if (files3 == null) {
-            return [];
-        }
-        List<File> versionExists = Arrays.asList(files3).findAll {
-            String version = it.name
-            File jarFile = new File(it, "${mavenId.artifactId}-${version}${fileType}.jar")
-            return jarFile.exists()
-        }
-        return versionExists.collect { it.name }
+        return mavenDefaultSettings.mavenFileFinder.findAllVersions(mavenId,fileType)
     }
 
+    @Deprecated
     List<String> findGradleAllVersions(MavenId mavenId) {
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.gradleLocalDir)
-        mavenId = mavenId.normalize()
-        File artifactDir = new File(mavenDefaultSettings.gradleLocalDir, "${mavenId.groupId}/${mavenId.artifactId}");
-        if (!artifactDir.exists()) {
-            return [];
-        }
-        File[] files3 = artifactDir.listFiles()
-        List<File> versionExists = Arrays.asList(files3).findAll {
-            String version = it.name
-            File[] files = it.listFiles()
-            String suffixx = "${mavenId.artifactId}-${version}${fileType}.jar"
-
-            for (File file1 : files) {
-                File jarFile = new File(file1, suffixx)
-                if (jarFile.exists()) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        return versionExists.collect { it.name }
+        return mavenDefaultSettings.gradleFileFinder.findAllVersions(mavenId,fileType)
     }
 
-    // TODO Source paring not work
+    @Deprecated
     List<String> findGrapeAllVersions(MavenId mavenId) {
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.grapeLocalDir)
-        mavenId = mavenId.normalize()
-        String groupId = mavenId.groupId
-        // File file = new File(grapeLocalDir, "${mavenId.groupId}/${mavenId.artifactId}/jars/${mavenId.artifactId}-${mavenId.version}.jar")
-        Collection<String> subDirNames = fileType== MavenFileType2.source.fileSuffix ? ['sources']:grapeBinaryPackages;
-        List<String> result = []
-        subDirNames.each {String grapeBinDir->
-            File files6 = new File(mavenDefaultSettings.grapeLocalDir, "${groupId}/${mavenId.artifactId}/${grapeBinDir}")
-            if (!files6.exists()) {
-                log.fine "dir not found : ${files6}"
-                return []
-            }
-            result.addAll( files6.listFiles().toList().findAll { it.name.startsWith(mavenId.artifactId) }
-                    .findAll { it.name.endsWith('.jar') }
-                    .collect {findGrapeVersion(mavenId.artifactId,it)})
-
-        }
-        return result
+        return mavenDefaultSettings.grapeFileFinder.findAllVersions(mavenId,fileType)
     }
 
+    @Deprecated
     String findGrapeVersion(String artifactId,File file){
-        String name = file.name;
-        name = name.substring(0, name.length() - 4)
-        if(file.parentFile.name=='sources'){
-            name =name.replace('-sources','');
-        }
-        name = name.replace("${artifactId}-", "")
-        return name;
+        return mavenDefaultSettings.grapeFileFinder.findGrapeVersion(artifactId,file)
     }
 
 
@@ -220,34 +160,34 @@ public class MavenCommonUtils {
 
     List<String> findAllMavenOrGradleVersions(MavenId mavenId) {
         List<String> versions = []
-        if (mavenDefaultSettings.mavenLocalDir != null && mavenDefaultSettings.mavenLocalDir.exists()) {
+        if (mavenDefaultSettings.grapeFileFinder.getMavenLocalDir2() != null && mavenDefaultSettings.grapeFileFinder.getMavenLocalDir2().exists()) {
+            versions.addAll(mavenDefaultSettings.grapeFileFinder.findAllVersions(mavenId,fileType))
+        }
+        if (mavenDefaultSettings.mavenFileFinder.getMavenLocalDir2() != null && mavenDefaultSettings.mavenFileFinder.getMavenLocalDir2()) {
             versions.addAll(findMavenAllVersions(mavenId))
         }
-        if (mavenDefaultSettings.gradleLocalDir != null && mavenDefaultSettings.gradleLocalDir.exists()) {
+        if (mavenDefaultSettings.gradleFileFinder.getMavenLocalDir2() != null && mavenDefaultSettings.gradleFileFinder.getMavenLocalDir2().exists()) {
             versions.addAll(findGradleAllVersions(mavenId))
-        }
-        if (mavenDefaultSettings.grapeLocalDir != null && mavenDefaultSettings.grapeLocalDir.exists()) {
-            versions.addAll(findGrapeAllVersions(mavenId))
         }
         return versions.unique()
     }
 
 
     File findMavenOrGradle(MavenId mavenId) {
-        if (mavenDefaultSettings.mavenLocalDir != null && mavenDefaultSettings.mavenLocalDir.exists()) {
+        if (mavenDefaultSettings.grapeFileFinder.getMavenLocalDir2() != null && mavenDefaultSettings.grapeFileFinder.getMavenLocalDir2().exists()) {
+            File file1 = findGrapeAtrifact(mavenId)
+            if (file1 != null && file1.exists()) {
+                return file1
+            }
+        }
+        if (mavenDefaultSettings.mavenFileFinder.getMavenLocalDir2() != null && mavenDefaultSettings.mavenFileFinder.getMavenLocalDir2().exists()) {
             File file1 = findMavenAtrifact(mavenId)
             if (file1 != null && file1.exists()) {
                 return file1
             }
         }
-        if (mavenDefaultSettings.gradleLocalDir != null && mavenDefaultSettings.gradleLocalDir.exists()) {
+        if (mavenDefaultSettings.gradleFileFinder.getMavenLocalDir2() != null && mavenDefaultSettings.gradleFileFinder.getMavenLocalDir2().exists()) {
             File file1 = findGradleAtrifact(mavenId)
-            if (file1 != null && file1.exists()) {
-                return file1
-            }
-        }
-        if (mavenDefaultSettings.grapeLocalDir != null && mavenDefaultSettings.grapeLocalDir.exists()) {
-            File file1 = findGrapeAtrifact(mavenId)
             if (file1 != null && file1.exists()) {
                 return file1
             }
@@ -256,46 +196,24 @@ public class MavenCommonUtils {
         //throw new FileNotFoundException(buildMavenPath(groupId, artifactId, version));
     }
 
+    @Deprecated
     File findGradleAtrifact(MavenId mavenId) {
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.gradleLocalDir)
-        mavenId = mavenId.normalize()
-        File[] files = new File(mavenDefaultSettings.gradleLocalDir, "${mavenId.groupId}/${mavenId.artifactId}/${mavenId.version}").listFiles()
-        String suffixx = "${mavenId.artifactId}-${mavenId.version}${fileType}.jar"
-
-        for (File file1 : files) {
-            File jarFile = new File(file1, suffixx)
-            if (jarFile.exists()) {
-                return jarFile
-            }
-        }
-        return null
+        return mavenDefaultSettings.gradleFileFinder.findArtifact(mavenId,fileType)
     }
 
-    public static List<String> grapeBinaryPackages = ['jars', 'bundles', 'eclipse-plugins']
+    @Deprecated
+    public static List<String> grapeBinaryPackages = GrapeFileFinder.grapeBinaryPackages
 
 
+    @Deprecated
     File findGrapeAtrifact(MavenId mavenId) {
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.grapeLocalDir)
-        mavenId = mavenId.normalize()
-        File file;
-        if(fileType == MavenFileType2.source.fileSuffix){
-            file = new File(mavenDefaultSettings.grapeLocalDir, "${mavenId.groupId}/${mavenId.artifactId}/sources/${mavenId.artifactId}-${mavenId.version}-sources.jar")
-        }else {
-            File f =new File(mavenDefaultSettings.grapeLocalDir, "${mavenId.groupId}/${mavenId.artifactId}")
-            grapeBinaryPackages.find {
-                file = new File(f,"${it}/${mavenId.artifactId}-${mavenId.version}.jar")
-                return file.exists()
-            }
-        }
-        return file
+        return mavenDefaultSettings.grapeFileFinder.findArtifact(mavenId,fileType)
     }
 
 
+    @Deprecated
     File findMavenAtrifact(MavenId mavenId) {
-        String suffix = buildMavenPath(mavenId)
-        JrrUtilities3.checkFileExist(mavenDefaultSettings.mavenLocalDir)
-        File file = new File(mavenDefaultSettings.mavenLocalDir, suffix)
-        return file
+        return mavenDefaultSettings.mavenFileFinder.findArtifact(mavenId,fileType)
     }
 
     String buildMavenPath(MavenId mavenId) {
@@ -308,94 +226,61 @@ public class MavenCommonUtils {
 
 
     MavenId detectMavenIdFromFileName(File file) {
-        if (mavenDefaultSettings.mavenLocalDir!=null && mavenDefaultSettings.mavenLocalDir.exists()) {
-            if (isParent(mavenDefaultSettings.mavenLocalDir, file)) {
-                MavenId mavenId = detectMavenIdFromFileNameInMavenDir(file, true)
-                if (mavenId != null) {
-                    return mavenId;
-                }
-//                return new MavenPath2(pathToParent);
-            }
-        }
-        if (mavenDefaultSettings.gradleLocalDir!=null && mavenDefaultSettings.gradleLocalDir.exists()) {
-            if (isParent(mavenDefaultSettings.gradleLocalDir, file)) {
-                MavenId mavenId = detectMavenIdFromFileNameInGradleDir(file, true)
-                if (mavenId != null) {
-                    return mavenId;
-                }
+        MavenId mavenId
 
-            }
+        mavenId= mavenDefaultSettings.grapeFileFinder.detectMavenIdFromFileName(file,true,fileType)
+        if (mavenId != null) {
+            return mavenId;
         }
-        if (mavenDefaultSettings.grapeLocalDir!=null && mavenDefaultSettings.grapeLocalDir.exists()) {
-            if (isParent(mavenDefaultSettings.grapeLocalDir, file)) {
-                MavenId mavenId = detectMavenIdFromFileNameInGrapeDir(file, true)
-                if (mavenId != null) {
-                    return mavenId;
-                }
-            }
+        mavenId= mavenDefaultSettings.mavenFileFinder.detectMavenIdFromFileName(file,true,fileType)
+        if (mavenId != null) {
+            return mavenId;
         }
+        mavenId= mavenDefaultSettings.gradleFileFinder.detectMavenIdFromFileName(file,true,fileType)
+        if (mavenId != null) {
+            return mavenId;
+        }
+
         return null
     }
 
+    @Deprecated
     MavenId detectMavenIdFromFileNameInGradleDir(File file, boolean logMismatch) {
-        File version = file.parentFile.parentFile;
-        File artifact = version.parentFile
-        String group = getPathToParent(mavenDefaultSettings.gradleLocalDir, artifact.parentFile);
-        String suffix = "${artifact.name}-${version.name}${fileType}.jar"
-        if (suffix == file.name) {
-            return new MavenId(group, artifact.name, version.name)
-        }
-        if (logMismatch) {
-            log.info "not matched suffix : ${suffix} != ${file.name}"
-        } else {
-            log.fine "not matched suffix : ${suffix} != ${file.name}"
-        }
-        return null;
+        return mavenDefaultSettings.gradleFileFinder.detectMavenIdFromFileName(file,true,fileType)
     }
 
     // log4j uses bundle in pom.xml
 //    static Collection<String> grapeBinaryDirs = new HashSet<String>( ['jars','bundles'])
 
+    @Deprecated
     MavenId detectMavenIdFromFileNameInGrapeDir(File file, boolean logMismatch) {
-        Collection<String> typeFill = fileType == MavenFileType2.binary.fileSuffix?grapeBinaryPackages:[fileType.replace('-','')];
-
-        if(!typeFill.contains(file.parentFile.name)){
-            GString msg = "bad name for parent dir ${file.absolutePath}, expected ${typeFill}"
-            if(logMismatch) {
-                log.info(msg)
-            }else{
-                log.fine(msg)
-            }
-            return null
-        }
-        File artifact = file.parentFile.parentFile
-        String group = artifact.parentFile.name;
-        String version = findGrapeVersion(artifact.name,file);
-        return new MavenId(group, artifact.name, version)
+        return mavenDefaultSettings.grapeFileFinder.detectMavenIdFromFileName(file,true,fileType)
     }
 
+    @Deprecated
     MavenId detectMavenIdFromFileNameInMavenDir(File file, boolean logMismatch) {
-        File version = file.parentFile;
-        File artifact = version.parentFile
-        String pathToParent = getPathToParent(mavenDefaultSettings.mavenLocalDir, artifact.parentFile);
-        String group = pathToParent.replace('/', '.');
-        String suffix = "${artifact.name}-${version.name}${fileType}.jar"
-        if (suffix == file.name) {
-            return new MavenId(group, artifact.name, version.name)
-        }
-        if (logMismatch) {
-            log.info "not matched : ${suffix} != ${file.name}"
-        } else {
-            log.fine "not matched : ${suffix} != ${file.name}"
-        }
-        return null
+        return mavenDefaultSettings.mavenFileFinder.detectMavenIdFromFileName(file,true,fileType)
     }
 
 
     String getPathToParent(File parent, File child) {
-        String parentPath = parent.absolutePath.replace('\\', '/')
-        String childPath = child.absolutePath.replace('\\', '/')
-        assert childPath.length() >= parentPath.length()
+        return getPathToParentS(parent,child)
+    }
+
+    static String getPathToParentS(File parent, File child) {
+        if(parent==null){
+            throw new NullPointerException("parent file is null, child ${child}")
+        }
+        if(child==null){
+            throw new NullPointerException("child file is null, parent ${parent}")
+        }
+        String parentPath = normalizePathToParent(parent)
+        String childPath =  normalizePathToParent(child)
+
+        if(!childPath.toLowerCase().startsWith(parentPath.toLowerCase())){
+            return null
+        }
+
         String res = childPath.substring(parentPath.length())
         if (res.startsWith('/')) {
             return res.substring(1)
@@ -405,8 +290,34 @@ public class MavenCommonUtils {
 
 
     boolean isParent(File parent, File child) {
-        String parentPath = parent.absolutePath.replace('\\', '/').toLowerCase()
-        String childPath = child.absolutePath.replace('\\', '/').toLowerCase()
+        return isParentS(parent,child)
+    }
+
+    static String normalizePathToParent(File file){
+        if(file==null){
+            throw new NullPointerException("file is null")
+        }
+        String parentPath = file.getCanonicalFile().getAbsolutePath().replace('\\', '/')
+        return parentPath
+    }
+
+    static String normalizePathIsParent(File file){
+        if(file==null){
+            throw new NullPointerException("file is null")
+        }
+        String parentPath = file.getAbsolutePath().replace('\\', '/').toLowerCase()
+        return parentPath
+    }
+
+    static boolean isParentS(File parent, File child) {
+        if(parent==null){
+            throw new NullPointerException("parent file is null, child ${child}")
+        }
+        if(child==null){
+            throw new NullPointerException("child file is null, parent ${parent}")
+        }
+        String parentPath = normalizePathIsParent(parent)
+        String childPath =  normalizePathIsParent(child)
         return childPath.startsWith(parentPath)
     }
 
@@ -432,7 +343,7 @@ public class MavenCommonUtils {
             assert javahome.exists()
             File toolsJarFile2 = new File(javahome, "../lib/tools.jar")
             if (toolsJarFile2.exists()) {
-                toolsJarFile2 = toolsJarFile2.canonicalFile.absoluteFile
+                toolsJarFile2 = toolsJarFile2.getCanonicalFile().getAbsoluteFile()
             }
             toolsJarFile = toolsJarFile2
         }

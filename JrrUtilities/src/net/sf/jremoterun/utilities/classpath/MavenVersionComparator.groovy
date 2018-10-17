@@ -37,8 +37,15 @@ class MavenVersionComparator implements MavenVersionComparatorI {
         DEFAULT_SPECIAL_MEANINGS.put("final", new Integer(2));
     }
 
+
     @Override
     boolean isOverrideMavenId2(MavenId mavenId, String versionSaved, String versionCandidate) {
+        if(versionSaved==null){
+            throw new NullPointerException("null versionSaved for ${mavenId}")
+        }
+        if(versionCandidate==null){
+            throw new NullPointerException("null versionCandidate for ${mavenId}")
+        }
         versionSaved = versionSaved.toLowerCase()
         versionCandidate = versionCandidate.toLowerCase()
 
@@ -56,6 +63,9 @@ class MavenVersionComparator implements MavenVersionComparatorI {
 //            log.info "vs = ${versionCandidate} ${versionSaved}"
             return false
         }
+        /**
+         * Return true if 3th param more then 2nd param
+         */
         int res = isOverrideMavenId(versionSaved, versionCandidate)
 //        String result = res > 0 ? versionCandidate : versionSaved
         return res <0

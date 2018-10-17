@@ -16,17 +16,6 @@ URLClassLoader detectCLassLoader(){
     return cll;
 }
 
-private File detectBaseDirOld() {
-    URLClassLoader classLoader = GroovyObject.classLoader as URLClassLoader
-    List<URL> all = classLoader.getURLs().toList().findAll { it.toString().tokenize('/').last().contains('groovy') }
-    File baseDir = all.first().file as File
-    assert baseDir.exists()
-    baseDir = baseDir.parentFile.parentFile.parentFile;
-    // println("base dir = ${baseDir}")
-    return baseDir
-}
-
-
 static File detectBaseDir() {
     ClassLoader classLoader = GroovyObject.classLoader
     URL resource = classLoader.getResource(GroovyObject.name.replace('.', '/') + '.class')

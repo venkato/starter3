@@ -1,14 +1,13 @@
 package net.sf.jremoterun.utilities.test
 
 import groovy.transform.CompileStatic
-import net.sf.jremoterun.utilities.JrrUtilities
 
 import java.util.logging.Logger;
 
 @CompileStatic
 public class JrrClassUtils2Test {
 
-	private static final Logger log = Logger.getLogger(JrrUtilities.getCurrentClass().getName());
+	//private static final Logger log = Logger.getLogger(JrrUtilities.getCurrentClass().getName());
 
 /*
 	void testFinalField44() throws Exception {

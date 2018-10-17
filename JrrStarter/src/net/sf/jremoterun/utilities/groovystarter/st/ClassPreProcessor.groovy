@@ -1,16 +1,7 @@
-package net.sf.jremoterun.utilities.groovystarter.st;
+package net.sf.jremoterun.utilities.groovystarter.st
 
-import javassist.bytecode.AnnotationsAttribute;
-import javassist.bytecode.ClassFile;
-import javassist.bytecode.annotation.Annotation;
-import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.classpath.ClassNameReference;
 
-import java.util.logging.Logger;
-
-import groovy.transform.CompileStatic;
-import org.codehaus.groovy.ast.AnnotationNode;
-import org.codehaus.groovy.ast.ClassNode;
+import groovy.transform.CompileStatic
 
 @CompileStatic
 public interface ClassPreProcessor {
