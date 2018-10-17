@@ -27,32 +27,37 @@ abstract class SeqPatternRunner {
 
     public Map<JrrRunnerPhaseI, List<Runnable>> listenersAfter = new ConcurrentHashMap()
 
-    void start(JrrRunnerPhaseI startPhase){
+    void start(JrrRunnerPhaseI startPhase) {
         jrrRunnerPhase = startPhase
         loop()
     }
 
 
-
     void loop() {
         while (true) {
             JrrRunnerPhaseI nextPhase = getNextPhase()
-            changeState3(nextPhase)
+            try {
+                changeState3(nextPhase)
+            } catch (Throwable e) {
+                log.info("failed at : ${nextPhase} ${nextPhase.getClass().getName()}")
+                throw e;
+            }
             if (nextPhase == FinalPhase.finalPhase) {
                 break
             }
+
         }
     }
 
-    JrrRunnerPhaseI getNextPhase(){
+    JrrRunnerPhaseI getNextPhase() {
         return jrrRunnerPhase.nextPhase()
 
     }
 
     abstract Runnable getRunnableForPhase(JrrRunnerPhaseI phase);
 
-    Runnable getRunnableForPhase2(JrrRunnerPhaseI phase){
-        if( phase == FinalPhase.finalPhase){
+    Runnable getRunnableForPhase2(JrrRunnerPhaseI phase) {
+        if (phase == FinalPhase.finalPhase) {
             return null;
         }
         return getRunnableForPhase(phase)
@@ -66,7 +71,7 @@ abstract class SeqPatternRunner {
         Runnable r = getRunnableForPhase2(jrrRunnerPhaseNew);
         if (r == null) {
 //            log.info "empty runnable for ${jrrRunnerPhaseNew}"
-        }else{
+        } else {
             r.run()
         }
         runRunners(getListeners(jrrRunnerPhaseNew, false))
@@ -74,7 +79,18 @@ abstract class SeqPatternRunner {
     }
 
     void runRunners(List<Runnable> runable) {
-        runable.each { it.run() }
+        runable.each {
+            try {
+                it.run()
+            } catch (Throwable e) {
+                onException(it, e)
+            }
+        }
+    }
+
+    void onException(Runnable r, Throwable e) {
+        log.info "failed on ${r} : ${e}"
+        throw e
     }
 
     List<Runnable> getListeners(JrrRunnerPhaseI phase, boolean before) {
@@ -110,7 +126,7 @@ abstract class SeqPatternRunner {
         getListeners(phase, before).add(listener)
     }
 
-    boolean isPhasePassed(JrrRunnerPhaseI phase){
+    boolean isPhasePassed(JrrRunnerPhaseI phase) {
         return phase == jrrRunnerPhase || passedPhase.contains(phase);
     }
 
@@ -128,11 +144,11 @@ abstract class SeqPatternRunner {
 
     void addL(JrrRunnerPhaseI phase, boolean before, Callable listener) {
         Runnable r = new RunnableClosure(listener)
-        addListenerOrRunIfPassedImpl(phase, before,  r);
+        addListenerOrRunIfPassedImpl(phase, before, r);
     }
 
     void addL(JrrRunnerPhaseI phase, boolean before, Runnable listener) {
-        addListenerOrRunIfPassedImpl(phase, before,  listener)
+        addListenerOrRunIfPassedImpl(phase, before, listener)
     }
 
     void addL(JrrRunnerPhaseI phase, boolean before, File listener) {
@@ -153,9 +169,6 @@ abstract class SeqPatternRunner {
     void addL(JrrRunnerPhaseI phase, boolean before, ClRef listener) {
         addL(phase, before, GroovyRunnerConfigurator2.createRunnerFromClass(listener.className))
     }
-
-
-
 
 
 }

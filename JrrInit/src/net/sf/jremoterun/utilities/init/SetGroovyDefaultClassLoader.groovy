@@ -1,9 +1,9 @@
 package net.sf.jremoterun.utilities.init
 
-import groovy.transform.CompileStatic
+
 import net.sf.jremoterun.utilities.JrrClassUtils
 import net.sf.jremoterun.utilities.classpath.ClRef
-import net.sf.jremoterun.utilities.classpath.ClassNameReference
+
 import net.sf.jremoterun.utilities.groovystarter.GroovyMethodRunnerParams
 
 import java.util.logging.Logger

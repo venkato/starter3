@@ -7,27 +7,44 @@ import net.sf.jremoterun.utilities.groovystarter.runners.ClRefRef
 
 import java.util.logging.Logger
 
-@EqualsAndHashCode
 @CompileStatic
-class ClRef implements ClRefRef,Serializable {
+class ClRef implements ClRefRef,Serializable,Comparable<ClRef> {
 
-    private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
+    //private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
-    public static ClassLoader defaultClassLoader = JrrClassUtils.getCurrentClassLoader()
+    public static ClassLoader defaultClassLoader = ClRef.getClassLoader()
 
 
     String className;
 
     ClRef(String c) {
+        this.className = c
+        if(c==null){
+            throw new NullPointerException('arg is null')
+        }
         if (c.contains(' ')) {
             throw new IllegalArgumentException("bad class name : ${c}")
         }
-        this.className = c
+        if(c.length()==0){
+            throw new IllegalArgumentException('class name is empty')
+        }
     }
 
 
     ClRef(Class clazz) {
-        this(clazz.name)
+        this(clazz.getName())
+    }
+
+
+
+    // clash with method from java.lang.Class#getName()
+//    @Deprecated
+//    String getName(){
+//        return className
+//    }
+
+    String getClassPath(){
+        return className.replace('.', '/');
     }
 
     @Override
@@ -36,7 +53,7 @@ class ClRef implements ClRefRef,Serializable {
     }
 
     Class loadClass2() {
-        return defaultClassLoader.loadClass(className)
+        return loadClass(defaultClassLoader)
     }
 
     Class loadClass(ClassLoader classLoader1) {
@@ -51,12 +68,12 @@ class ClRef implements ClRefRef,Serializable {
 
     Class loadClass23(ClassLoader classLoader1) {
         Thread thread = Thread.currentThread()
-        ClassLoader loader23 = thread.getContextClassLoader()
+        ClassLoader threadLoaderBefore = thread.getContextClassLoader()
         try {
             thread.setContextClassLoader(classLoader1)
             return classLoader1.loadClass(className)
         } finally {
-            thread.setContextClassLoader(loader23)
+            thread.setContextClassLoader(threadLoaderBefore)
         }
     }
 
@@ -80,5 +97,35 @@ class ClRef implements ClRefRef,Serializable {
         return className
     }
 
+    boolean equals(o) {
+        if(o==null){
+            return false
+        }
+        if (this.is(o)) return true;
+        if (getClass() != o.getClass()) return false;
 
+        ClRef clRef = (ClRef) o;
+
+        if (className != clRef.className) return false;
+
+        return true;
+    }
+
+    int hashCode() {
+        return (className != null ? className.hashCode() : 0)
+    }
+
+    @Override
+    int compareTo(ClRef o1) {
+        if(o1==null){
+            return -1
+        }
+        if(className==null){
+            return -1
+        }
+        if(o1.className==null){
+            return 1
+        }
+        return className.compareTo(o1.className)
+    }
 }

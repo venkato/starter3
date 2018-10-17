@@ -2,8 +2,9 @@ package net.sf.jremoterun.utilities
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.JrrUtils
+import net.sf.jremoterun.callerclass.CallerClassIgnore
+import net.sf.jremoterun.callerclass.GetCallerClassS
 import net.sf.jremoterun.utilities.classpath.ClRef
-import sun.reflect.Reflection
 
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -21,41 +22,23 @@ public class JrrClassUtils {
 
     public static Map<Class, Field[]> isReadOnlyFields = new HashMap();
     public static Method getFieldAccessorMethod;
+    public static Method getFieldAccessorMethod21;
+    public static Method getOverrideFieldAccessor21;
+    public static Field overrideField21;
     public static Field modifiersField;
+    public static String mainMethodName = 'main';
 
     /**
      * Classes, which will be ignored during searching caller class.
      */
 
-    public static HashSet<String> ignoreClassesForCurrentClass;
+    public static HashSet<String> ignoreClassesForCurrentClass = CallerClassIgnore.ignoreClassesForCurrentClass;
 
-    static {
-        String[] ignoreClassesForCurrentClass2 = [//
-                                                  "java_util_logging_Logger",
-                                                  "groovy.ui.GroovyMain", "groovy.lang.GroovyShell",//
-                                                  "groovy.lang.MetaMethod",
-                                                  "groovy.lang.Closure", "groovy.lang.MetaClassImpl",//
-                                                  "org.apache.commons.logging.", "org.apache.log4j.",//
-                                                  "java.util.logging.", "org.slf4j.",//
-                                                  "ch.qos.logback",
-                                                  "org.eclipse.jdt.internal.junit", "sun.reflect.",//
-                                                  "java.lang.reflect.Method", "org.codehaus.groovy.runtime.",//
-                                                  "org.codehaus.groovy.reflection.", "org.apache.logging.",//
-                                                  "org.eclipse.jdt.internal.junit", //
-                                                  "com.intellij.idea.IdeaLogger", "com.intellij.openapi.diagnost",// idea
-                                                  "org.sonatype.guice.bean.reflect.Logs",
-                                                  "net.sf.jremoterun.utilities.groovystarter.st.JdkLogFormatter", //
-                                                  "sun.util.logging.", //
-                                                  "org.codehaus.groovy.tools.shell.util.Logger",
-                                                  //
-                                                  "net.sf.jremoterun.utilities.nonjdk.log.JdkLoggerExtentionClass",
-                                                  //
-                "org.jboss.windup.decompiler.fernflower.FernflowerJDKLogger",//
-                                                  JrrClassUtils.getName()];
-        ignoreClassesForCurrentClass = new HashSet<String>(Arrays.asList(ignoreClassesForCurrentClass2));
-//		Collections.sort(ignoreClassesForCurrentClass,String.CASE_INSENSITIVE_ORDER);
+
+    static void addIgnoreClass(Class clazz) {
+        assert clazz != Class
+        ignoreClassesForCurrentClass.add(clazz.getName())
     }
-
 
     public static StringBuilder printExceptionWithoutIgnoreClasses(Throwable t) {
         StringBuilder sb = new StringBuilder();
@@ -101,13 +84,33 @@ public class JrrClassUtils {
 
     public static Field findModifiersField() throws NoSuchFieldException {
         if (modifiersField == null) {
-            modifiersField = Field.getDeclaredField("modifiers");
+            modifiersField = findField(Field, "modifiers");
             modifiersField.setAccessible(true);
             try {
-                getFieldAccessorMethod = Field.getDeclaredMethod("getFieldAccessor", Object);
-                getFieldAccessorMethod.setAccessible(true);
+                try {
+                    getFieldAccessorMethod = findMethodByParamTypes3(Field, "getFieldAccessor", Object);
+                    getFieldAccessorMethod.setAccessible(true);
+                }catch(java.lang.NoSuchMethodException e3){
+                    log.log(Level.FINE, "can't find field modifiers 10", e3);
+                    getFieldAccessorMethod21  = findMethodByParamTypes3(Field, "getFieldAccessor");
+                    getFieldAccessorMethod21.setAccessible(true)
+                    getOverrideFieldAccessor21  = findMethodByParamTypes3(Field, "getOverrideFieldAccessor");
+                    getOverrideFieldAccessor21.setAccessible(true)
+                    overrideField21  = findField(Field, "override");
+                    overrideField21.setAccessible(true)
+                }catch(Exception e3){
+                    log.log(Level.SEVERE, "can't find field modifiers12 ${e3.getClass().getName()}", e3);
+                    getFieldAccessorMethod21  = findMethodByParamTypes3(Field, "getFieldAccessor");
+                    getFieldAccessorMethod21.setAccessible(true)
+                    getOverrideFieldAccessor21  = findMethodByParamTypes3(Field, "getOverrideFieldAccessor");
+                    getOverrideFieldAccessor21.setAccessible(true)
+                    overrideField21  = findField(Field, "override");
+                    overrideField21.setAccessible(true)
+                }
+            } catch (java.lang.NoSuchMethodException e) {
+                log.log(Level.SEVERE, "can't find field modifiers30", e);
             } catch (Exception e) {
-                log.log(Level.SEVERE, "can't find field modifiers", e);
+                log.log(Level.SEVERE, "can't find field modifiers31", e);
             }
         }
         return modifiersField;
@@ -157,26 +160,54 @@ public class JrrClassUtils {
             throws NoSuchFieldException, IllegalAccessException {
         findModifiersField();
         modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-        Object overrideFieldAccessor = null;
-        Field[] fields = null;
         try {
             field.setAccessible(true);
 //            println("set ${field.name}")
-            if (!isFinalFieldInternal(field, onValue) && getFieldAccessorMethod != null) {
-                overrideFieldAccessor = getFieldAccessorMethod.invoke(field, onValue);
-                if (overrideFieldAccessor == null) {
-                    log.info("overrideFieldAccessor is null " + field.getName());
-                } else {
-                    fields = findReadOnlyAndFinalFields(overrideFieldAccessor.getClass());
-                    if (fields[0] != null) {
-                        fields[0].set(overrideFieldAccessor, false);
+            if (!isFinalFieldInternal(field, onValue) ) {
+                if(getFieldAccessorMethod != null) {
+                    Object overrideFieldAccessor = getFieldAccessorMethod.invoke(field, onValue);
+                    if (overrideFieldAccessor == null) {
+                        log.info("overrideFieldAccessor is null " + field.getName());
+                    } else {
+                        Field[] fields = findReadOnlyAndFinalFields(overrideFieldAccessor.getClass());
+                        if (fields[0] != null) {
+                            fields[0].set(overrideFieldAccessor, false);
+                        }
+                        if (fields[1] != null) {
+                            // if (overrideFieldAccessor == onValue) {
+                            // fields[1].set(overrideFieldAccessor, false);
+                            // } else {
+                            setFinalFieldValue(overrideFieldAccessor, fields[1], false);
+                            // }
+                        }
                     }
-                    if (fields[1] != null) {
-                        // if (overrideFieldAccessor == onValue) {
-                        // fields[1].set(overrideFieldAccessor, false);
-                        // } else {
-                        setFinalFieldValue(overrideFieldAccessor, fields[1], false);
-                        // }
+                }
+                if(getFieldAccessorMethod21 != null) {
+                    boolean  override = overrideField21.get(field)
+                    Object overrideFieldAccessor
+                    if(override) {
+                        overrideFieldAccessor = getFieldAccessorMethod21.invoke(field);
+                    }else{
+                        overrideFieldAccessor = getOverrideFieldAccessor21.invoke(field);
+                    }
+                    if (overrideFieldAccessor == null) {
+                        log.info("overrideFieldAccessor is null ${override} " + field.getName());
+                    } else {
+                        Field[] fields = findReadOnlyAndFinalFields(overrideFieldAccessor.getClass());
+                        Field f0 =  fields[0];
+                        if (f0 != null) {
+                            log.info("setting field ${f0} ${overrideFieldAccessor.getClass().getName()}")
+                            f0.set(overrideFieldAccessor, false);
+                        }
+                        Field f1 =  fields[0];
+                        if (f1 != null) {
+                            // if (overrideFieldAccessor == onValue) {
+                            // fields[1].set(overrideFieldAccessor, false);
+                            // } else {
+                            log.info("setting field ${f1} ${overrideFieldAccessor.getClass().getName()}")
+                            setFinalFieldValue(overrideFieldAccessor, f1, false);
+                            // }
+                        }
                     }
                 }
             }
@@ -188,8 +219,8 @@ public class JrrClassUtils {
     public static boolean isFinalFieldInternal(Field field, Object onValue) {
 //        log.info "field from class : ${field.getDeclaringClass()}"
 //        jdk.internal.reflect.UnsafeFieldAccessorImpl
-        String name = field.getDeclaringClass().getPackage().getName();
-        if ('sun.reflect' == name || name == 'jdk.internal.reflect') {
+        String pkgName = field.getDeclaringClass().getPackage().getName();
+        if ('sun.reflect' == pkgName || pkgName == 'jdk.internal.reflect') {
             if ('isFinal' == field.getName()) {
                 return true;
             }
@@ -219,6 +250,9 @@ public class JrrClassUtils {
         modifiersField.setInt(field, field.getModifiers() & Modifier.FINAL);
     }
 
+    public static void setFieldValueR(ClRef clRef, Object onObjectOrClass, final String fieldName, Object fieldValue){
+        setFieldValue(onObjectOrClass,fieldName,fieldValue)
+    }
 
     public static void setFieldValue(Object onObjectOrClass, final String fieldName, Object fieldValue)
             throws NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
@@ -227,8 +261,8 @@ public class JrrClassUtils {
         }
         final Object onInvoke;
         final Class clazz;
-        if (onInvoke instanceof ClRef) {
-            clazz = onInvoke.loadClass2()
+        if (onObjectOrClass instanceof ClRef) {
+            clazz = onObjectOrClass.loadClass2()
             onInvoke = null;
         } else if (onObjectOrClass instanceof Class) {
             clazz = (Class) onObjectOrClass;
@@ -250,14 +284,22 @@ public class JrrClassUtils {
         }
     }
 
-    /**
-     * Find first constructor in <code>clazz</code> with specified
-     * <code>numberOfParams</code>. Use also methods from
-     * {@link org.springframework.util.ReflectionUtils}
-     */
+    @Deprecated
     public static <T> Constructor<T> findContructor(Class<T> clazz, final int numberOfParams)
             throws NoSuchMethodException {
-        for (final Constructor method : clazz.getDeclaredConstructors()) {
+        return findConstructorByCount(clazz,numberOfParams)
+    }
+
+    public static <T> Constructor<T> findConstructorByCount(ClRef clazz, final int numberOfParams){
+        return  (Constructor)findConstructorByCount(clazz.loadClass2(),numberOfParams);
+    }
+
+    public static <T> Constructor<T> findConstructorByCount(Class<T> clazz, final int numberOfParams)
+            throws NoSuchMethodException {
+        if (clazz == null) {
+            throw new IllegalArgumentException("class is null when finding : ${numberOfParams}")
+        }
+        for (final Constructor method : JrrClassUtils.getDeclaredConstructors(clazz)) {
             final Class[] paramTypes = method.getParameterTypes();
             if (paramTypes.length == numberOfParams) {
                 method.setAccessible(true);
@@ -267,7 +309,81 @@ public class JrrClassUtils {
         throw new NoSuchMethodException(clazz.getName() + " number of args " + numberOfParams);
     }
 
-    /**
+    public static volatile boolean getDeclaredConstructors0Inited = false
+    public static volatile Method getDeclaredConstructors0M;
+
+
+    static Constructor[] getDeclaredConstructors(Class clazz) {
+        if (!getDeclaredConstructors0Inited) {
+            getDeclaredConstructors0Inited = true
+            try {
+                getDeclaredConstructors0M = findMethodByCount(Class, "getDeclaredConstructors0", 1)
+            } catch (NoSuchMethodException e) {
+                log.log(Level.WARNING, "failed find getDeclaredConstructors0", e)
+            }
+//            getDeclaredMethodsM = Class.getDeclaredMethod("getDeclaredFields0", boolean.class)
+        }
+        if (getDeclaredConstructors0M == null) {
+            return clazz.getDeclaredConstructors()
+        }
+        return getDeclaredConstructors0M.invoke(clazz, false) as Constructor[]
+    }
+
+
+    public static volatile boolean getDeclaredFields0Inited = false
+    public static volatile Method getDeclaredFields0M;
+
+
+    static Field[] getDeclaredFields(Class clazz) {
+        if (!getDeclaredFields0Inited) {
+            getDeclaredFields0Inited = true
+            try {
+                getDeclaredFields0M = getDeclaredFields0()
+            } catch (NoSuchMethodException e) {
+                log.log(Level.WARNING, "failed find getDeclaredFields0", e)
+            }
+//            getDeclaredMethodsM = Class.getDeclaredMethod("getDeclaredFields0", boolean.class)
+        }
+        if (getDeclaredFields0M == null) {
+            return clazz.getDeclaredFields()
+        }
+        return getDeclaredFields0M.invoke(clazz, false) as Field[]
+    }
+
+    static Method getDeclaredFields0(){
+        return findMethodByCount(Class, "getDeclaredFields0", 1)
+    }
+
+
+    public static volatile boolean getDeclaredMethodsInited = false
+    public static volatile Method getDeclaredMethodsM;
+
+    static Method[] getDeclaredMethods(Class clazz) {
+        if (!getDeclaredMethodsInited) {
+            getDeclaredMethodsInited = true
+            try {
+                getDeclaredMethodsM = Class.getDeclaredMethod("getDeclaredMethods0", boolean)
+                getDeclaredMethodsM.setAccessible(true)
+            } catch (NoSuchMethodException e) {
+                log.log(Level.WARNING, "failed find getDeclaredMethods0", e)
+            }
+//            getDeclaredMethodsM = Class.getDeclaredMethod("getDeclaredFields0", boolean.class)
+        }
+        if (getDeclaredMethodsM == null) {
+            return clazz.getDeclaredMethods()
+        }
+        return getDeclaredMethodsM.invoke(clazz, false) as Method[]
+
+    }
+
+    public static Method findMethodByCount(ClRef clazz,
+                                           final String methodName,
+                                           final int numberOfParams) throws NoSuchMethodException {
+        return findMethodByCount(clazz.loadClass2(),methodName,numberOfParams)
+    }
+
+
+        /**
      * Find first method in <code>clazz</code> with specified
      * <code>methodName</code> and specified <code>numberOfParams</code>. Use
      * also methods from {@link org.springframework.util.ReflectionUtils}
@@ -275,9 +391,12 @@ public class JrrClassUtils {
     public static Method findMethodByCount(Class clazz,
                                            final String methodName,
                                            final int numberOfParams) throws NoSuchMethodException {
+        if (clazz == null) {
+            throw new IllegalArgumentException("class is null when finding : ${methodName} ${numberOfParams}")
+        }
         Class classOriginal = clazz;
         while (true) {
-            for (final Method method : clazz.getDeclaredMethods()) {
+            for (final Method method : getDeclaredMethods(clazz)) {
                 if (method.getName().equals(methodName)) {
                     final Class[] paramTypes = method.getParameterTypes();
                     if (paramTypes.length == numberOfParams) {
@@ -290,6 +409,10 @@ public class JrrClassUtils {
             if (clazz == Object) {
                 break;
             }
+            if (clazz == null) {
+                // interface
+                break
+            }
         }
         throw new NoSuchMethodException("Class: " + classOriginal.getName() + ", method name: " + methodName + ", params count: " + numberOfParams);
     }
@@ -301,7 +424,7 @@ public class JrrClassUtils {
     }
 
     public static void runMainMethod(final Class clazz, final String[] args) throws Exception {
-        final Method mainMethod = clazz.getMethod("main", String[]);
+        final Method mainMethod = clazz.getMethod(mainMethodName, String[]);
         Object[] args2 = [args]
         mainMethod.invoke(null, args2);
     }
@@ -316,7 +439,7 @@ public class JrrClassUtils {
      */
     public static <T> Constructor<T> findConstructor(Class<T> clazz, final Object... params)
             throws NoSuchMethodException {
-        for (final Constructor method : clazz.getDeclaredConstructors()) {
+        for (final Constructor method : JrrClassUtils.getDeclaredConstructors(clazz)) {
             if (checkIfConstuctorMatched(method, params)) {
                 method.setAccessible(true)
                 return method;
@@ -355,9 +478,17 @@ public class JrrClassUtils {
     }
 
 
+    public static Method findMethodByParamTypes1(ClRef clazz, final String methodName, final Object... params){
+        findMethodByParamTypes1(clazz.loadClass2(),methodName,params)
+    }
+
     public static Method findMethodByParamTypes1(Class clazz, final String methodName, final Object... params)
             throws NoSuchMethodException {
         return findMethodByParamTypes2(clazz, methodName, params);
+    }
+
+    public static Method findMethodByParamTypes2(ClRef clazz, final String methodName, final Object[] params) {
+        findMethodByParamTypes2(clazz.loadClass2(),methodName,params)
     }
 
     public static Method findMethodByParamTypes2(Class clazz, final String methodName, final Object[] params) {
@@ -377,9 +508,18 @@ public class JrrClassUtils {
         findMethodByParamTypes4(clazz, methodName, params2)
     }
 
+    public static Method findMethodByParamTypes3(ClRef clazz, final String methodName, final Class... params)throws NoSuchMethodException {
+        findMethodByParamTypes4(clazz.loadClass2(), methodName, params)
+    }
+
     public static Method findMethodByParamTypes3(Class clazz, final String methodName, final Class... params)
             throws NoSuchMethodException {
         findMethodByParamTypes4(clazz, methodName, params)
+    }
+
+    public static Method findMethodByParamTypes4(ClRef clazz, final String methodName, final Class[] params)
+            throws NoSuchMethodException {
+        findMethodByParamTypes4(clazz.loadClass2(),methodName,params)
     }
 
     /**
@@ -394,9 +534,13 @@ public class JrrClassUtils {
      */
     public static Method findMethodByParamTypes4(Class clazz, final String methodName, final Class[] params)
             throws NoSuchMethodException {
+        if (clazz == null) {
+            throw new IllegalArgumentException("class is null when finding : ${methodName} ${params}")
+        }
+        checkForSpaces(methodName);
         Class clazzOrig = clazz;
         while (true) {
-            for (final Method method : clazz.getDeclaredMethods()) {
+            for (final Method method : getDeclaredMethods(clazz)) {
                 if (method.getName() == methodName) {
                     final Class[] paramTypes = method.getParameterTypes();
                     if (paramTypes.length == 0 && (params == null || params.length == 0)) {
@@ -414,6 +558,11 @@ public class JrrClassUtils {
             clazz = clazz.getSuperclass();
             if (clazz == Object) {
                 break;
+            }
+
+            if (clazz == null) {
+                // interface
+                break
             }
         }
         String paramsAsString = "";
@@ -470,8 +619,16 @@ public class JrrClassUtils {
     }
 
 
+    static Object invokeJavaMethodR(ClRef clRef, Object object, final String methodName, final Object... params) throws Exception {
+        invokeJavaMethod(object,methodName,params)
+    }
+
     static Object invokeJavaMethod(Object object, final String methodName, final Object... params) throws Exception {
         return invokeJavaMethod2(object, methodName, params)
+    }
+
+    static Object invokeJavaMethod2R(ClRef clRef, Object object, final String methodName, final Object[] params) throws Exception {
+        invokeJavaMethod2(object,methodName,params)
     }
 
     static Object invokeJavaMethod2(Object object, final String methodName, final Object[] params) throws Exception {
@@ -480,10 +637,10 @@ public class JrrClassUtils {
         }
         final Object onInvoke;
         final Class clazz;
-        if (onInvoke instanceof ClRef) {
-            clazz = onInvoke.loadClass2()
+        if (object instanceof ClRef) {
+            clazz = object.loadClass2()
             onInvoke = null;
-        }else if (object instanceof Class) {
+        } else if (object instanceof Class) {
             clazz = (Class) object;
             onInvoke = null;
         } else {
@@ -520,7 +677,7 @@ public class JrrClassUtils {
      */
     public static <T> void makeClone(final T fromInstance, final T toInstance, final Class clazz)
             throws IllegalAccessException {
-        for (final Field field : clazz.getDeclaredFields()) {
+        for (final Field field : getDeclaredFields(clazz)) {
             final int modif = field.getModifiers();
             if (!Modifier.isStatic(modif)) {
                 field.setAccessible(true);
@@ -571,10 +728,10 @@ public class JrrClassUtils {
         checkInstanceOf(fromInstance, fromInstanceClazz);
         checkInstanceOf(toInstance, toInstanceClazz);
         final Map<String, Field> toFieldsNameMap = new HashMap();
-        for (final Field field : toInstanceClazz.getDeclaredFields()) {
+        for (final Field field : getDeclaredFields(toInstanceClazz)) {
             toFieldsNameMap.put(field.getName(), field);
         }
-        for (final Field fromField : fromInstanceClazz.getDeclaredFields()) {
+        for (final Field fromField : getDeclaredFields(fromInstanceClazz)) {
             final int modif = fromField.getModifiers();
             if (!Modifier.isStatic(modif)) {
                 fromField.setAccessible(true);
@@ -604,9 +761,13 @@ public class JrrClassUtils {
      * Find first declared field in class
      */
     public static Field findField(Class clazzInit, final String fieldName) throws NoSuchFieldException {
+        if (clazzInit == null) {
+            throw new IllegalArgumentException("class is null when finding : ${fieldName}")
+        }
+        checkForSpaces(fieldName);
         Class clazz = clazzInit;
         while (true) {
-            for (final Field field : clazz.getDeclaredFields()) {
+            for (final Field field : getDeclaredFields(clazz)) {
                 if (field.getName().equals(fieldName)) {
                     field.setAccessible(true);
                     return field;
@@ -616,8 +777,29 @@ public class JrrClassUtils {
             if (clazz == Object) {
                 break;
             }
+            if (clazz == null) {
+                // that is interface
+                break
+            }
         }
         throw new NoSuchFieldException(fieldName + " " + clazzInit.getName());
+    }
+
+    public static volatile boolean isCheckForSpaces = true
+
+    public static void checkForSpaces(String fieldName) {
+        if (isCheckForSpaces) {
+            if (fieldName.startsWith(' ')) {
+                throw new IllegalArgumentException("Start with space ${fieldName}")
+            }
+            if (fieldName.endsWith(' ')) {
+                throw new IllegalArgumentException("Ends with space ${fieldName} .")
+            }
+        }
+    }
+
+    static Object getFieldValueR(ClRef clRef, Object object, final String fieldName){
+        return getFieldValue(object,fieldName)
     }
 
     /**
@@ -640,6 +822,9 @@ public class JrrClassUtils {
             clazz = object.getClass();
             onInvoke = object;
         }
+        if (clazz == null) {
+            throw new IllegalStateException("failed find class for : ${object}")
+        }
         Field field = findField(clazz, fieldName);
         if (onInvoke == null && !Modifier.isStatic(field.getModifiers())) {
             throw new IllegalArgumentException("field is not static, but onInvoke is null");
@@ -653,6 +838,7 @@ public class JrrClassUtils {
      * called. Last element is class where current thread is created. Classes
      * associated with java.lang.reflect.Method.invoke() are ignored.
      */
+    /*
     public static ArrayList<Class> buildClassStack() {
         final ArrayList<Class> result = new ArrayList();
         int i = 2;
@@ -665,6 +851,8 @@ public class JrrClassUtils {
         return result;
     }
 
+     */
+
     public static Logger getJdkLogForCurrentClass() {
 //		Thread.dumpStack();
         Class currentClass = getCurrentClass();
@@ -676,27 +864,20 @@ public class JrrClassUtils {
     }
 
     private static Class getCurrentClassImpl() {
-        int i = 2;
-        while (true) {
-            i++;
-            Class<?> callerClass = Reflection.getCallerClass(i);
-            String name = callerClass.getName();
-            if (!checkIfClassIgnored(name)) {
-                return callerClass;
-            }
-        }
+        return GetCallerClassS.getCallerClassImpl().getCallerClass();
     }
 
     static Class getCurrentClassImpl4(int depth) {
-        int i = 1;
-        while (true) {
-            i++;
-            Class<?> callerClass = Reflection.getCallerClass(i);
-            String name = callerClass.getName();
-            if (!checkIfClassIgnored(name)) {
-                return callerClass;
-            }
-        }
+        return GetCallerClassS.getCallerClassI.getCallerClass();
+//        int i = 1;
+//        while (true) {
+//            i++;
+//            Class<?> callerClass = Reflection.getCallerClass(i);
+//            String name = callerClass.getName();
+//            if (!checkIfClassIgnored(name)) {
+//                return callerClass;
+//            }
+//        }
     }
 
     static boolean checkIfClassIgnored(String name) {
