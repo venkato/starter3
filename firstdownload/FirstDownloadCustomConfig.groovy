@@ -3,12 +3,12 @@ import net.sf.jremoterun.utilities.classpath.*;
 import net.sf.jremoterun.utilities.groovystarter.*;
 
 @CompileStatic
-class FirstDownloadCustomConfig extends GroovyRunnerConfigurator2 {
+class FirstDownloadCustomConfig implements Runnable {
 
     MavenDefaultSettings mds = MavenDefaultSettings.mavenDefaultSettings;
 
     @Override
-    void doConfig() {
+    void run() {
         mds.jrrDownloadDir = "" as File;
     }
 

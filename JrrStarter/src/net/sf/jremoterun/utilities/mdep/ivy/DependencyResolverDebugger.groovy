@@ -7,6 +7,7 @@ import org.apache.ivy.core.cache.RepositoryCacheManager;
 import org.apache.ivy.core.module.descriptor.Artifact
 import org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor;
 import org.apache.ivy.core.module.descriptor.DependencyDescriptor
+import org.apache.ivy.core.module.descriptor.MDArtifact
 import org.apache.ivy.core.module.descriptor.ModuleDescriptor;
 import org.apache.ivy.core.module.id.ModuleRevisionId;
 import org.apache.ivy.core.report.ArtifactDownloadReport;
@@ -41,6 +42,7 @@ class DependencyResolverDebugger implements DependencyResolver{
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
+    public static JrrDependecyAmender dependecyAmender = new JrrDependecyAmender();
 
     DependencyResolver dependencyResolver;
     IBiblioResolver ibiblio
@@ -90,19 +92,7 @@ class DependencyResolverDebugger implements DependencyResolver{
             dr = ibiblio.getDependency(dd, data)
             log.info "after retry : ${dr}"
         }
-//        Thread.sleep(Long.MAX_VALUE)
-//        log.info "${dd} ${dr}"
-//        log.info "${dr.class.name}"
-//        log.info "${dr.descriptor}"
-//        log.info "${dr.descriptor.class.name}"
-//        DefaultModuleDescriptor dd3 = dr.descriptor as DefaultModuleDescriptor
-//
-////        log.info "${dr.resolver}"
-//        log.info "${dr.report}"
-//        log.info "${dr.artifactResolver}"
-//        log.info "${dr.artifactResolver.class.name}"
-////        InitializerHomePcAll.init()/
-        return dr
+        return dependecyAmender.amendIfNeeded(dr,dd,data)
     }
 
     public ResolvedResource findIvyFileRef(DependencyDescriptor dd, ResolveData data) {
@@ -201,7 +191,7 @@ class DependencyResolverDebugger implements DependencyResolver{
             List subresolvers = ((ChainResolver) dependencyResolver).getResolvers();
             for (Iterator iter = subresolvers.iterator(); iter.hasNext();) {
                 DependencyResolver dr = (DependencyResolver) iter.next();
-                assert dr.name!=null
+                assert dr.getName()!=null
                 ivySettings.addResolver(dr);
             }
         } else if (dependencyResolver instanceof DualResolver) {

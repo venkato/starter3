@@ -4,20 +4,12 @@ import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Field
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
+import java.lang.reflect.Modifier
 import java.util.logging.Logger
 
-import groovy.transform.CompileStatic;
-import net.sf.jremoterun.JrrUtils;
-import sun.reflect.Reflection;
+import groovy.transform.CompileStatic
 
 @CompileStatic
 public class JrrClassUtils2 {
@@ -28,17 +20,21 @@ public class JrrClassUtils2 {
 						   @ClosureParams(value=SimpleType.class, options="java.lang.reflect.Field")
 						   final Closure<Boolean> fieldMatcher) throws NoSuchFieldException {
 		assert 	fieldMatcher.parameterTypes.length ==1
-		assert 	fieldMatcher.parameterTypes[0] == Field
+		//assert 	fieldMatcher.parameterTypes[0] == Field
 		Class clazz = clazzInit;
 		while (true) {
-			for (final Field field : clazz.getDeclaredFields()) {
+			for (final Field field : JrrClassUtils.getDeclaredFields(clazz)) {
 				field.setAccessible(true);
 				if(fieldMatcher(field)) {
 					return true
 				}
 			}
 			clazz = clazz.getSuperclass();
-			if (clazz == Object.class) {
+			if (clazz == null) {
+				// can be null for interfaces
+				break
+			}
+			if (clazz == Object) {
 				break;
 			}
 		}
@@ -72,7 +68,7 @@ public class JrrClassUtils2 {
 		assert 	methodMatcher.parameterTypes.length ==1
 		assert 	methodMatcher.parameterTypes[0] == Method
 		while (true) {
-			for (final Method method : clazz.getDeclaredMethods()) {
+			for (final Method method : JrrClassUtils.getDeclaredMethods(clazz)) {
 				method.setAccessible(true);
 				if(methodMatcher(method)) {
 					return true
@@ -115,7 +111,7 @@ public class JrrClassUtils2 {
 		final Closure<Boolean> methodMatcher) throws NoSuchMethodException {
 		assert 	methodMatcher.parameterTypes.length ==1
 		assert 	methodMatcher.parameterTypes[0] == Constructor
-		for (final Constructor method : clazz.getDeclaredConstructors()) {
+		for (final Constructor method : JrrClassUtils.getDeclaredConstructors(clazz)) {
 			method.setAccessible(true);
 			if(methodMatcher(method)) {
 				return method

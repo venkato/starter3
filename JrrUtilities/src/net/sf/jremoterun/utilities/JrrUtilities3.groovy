@@ -2,49 +2,41 @@ package net.sf.jremoterun.utilities
 
 import groovy.transform.CompileStatic;
 import net.sf.jremoterun.ICodeForExecuting;
-import net.sf.jremoterun.JrrUtils;
+import net.sf.jremoterun.JrrUtils
+import net.sf.jremoterun.utilities.classpath.ClRef;
 import sun.awt.AppContext;
-import sun.misc.Unsafe;
-import sun.reflect.Reflection;
+import sun.misc.Unsafe
 
-import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.swing.*;
-import java.awt.*;
-import java.io.*;
+import java.awt.*
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.Charset;
-import java.security.Provider;
-import java.security.Security;
-import java.util.*;
+import java.lang.reflect.Method
+import java.nio.charset.Charset
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
+/**
+ * @see net.sf.jremoterun.utilities.JrrUtilities extends this class
+ */
+@Deprecated
 @CompileStatic
 public class JrrUtilities3 {
 
     public static final String domainName = "JRemoteRun";
 
-    public static final Pattern numberPattern = Pattern.compile("\\d*");
-
-    /**
-     * Display if java runtime >= 1.5
-     */
-    public static final boolean java5;
-
-    public static Runnable runnableCode;
-
-    public static ICodeForExecuting runnableCodeRich;
+//    public static final Pattern numberPattern = Pattern.compile("\\d*");
+//
+//    public static Runnable runnableCode;
+//
+//    public static ICodeForExecuting runnableCodeRich;
 
     public static Method classLoaderAddUrlMethod;
 
@@ -54,44 +46,46 @@ public class JrrUtilities3 {
 
     public static Map<String, Set<String>> securityServices;
 
+    @Deprecated
     public static Constructor<HashMap> constructorHashMap;
+
+    @Deprecated
     public static Constructor<ConcurrentHashMap> constructorConcurrentHashMap;
+
+    @Deprecated
     public static Constructor<TreeSet> constructorTreeSet;
+
+    @Deprecated
     public static Constructor<ArrayList> constructorArrayList;
+
+    @Deprecated
     public static Constructor<HashSet> constructorHashSet;
 
-    // this field is null for openjdk 6
-    public static Object rootTableKey;
-    public static Map<ThreadGroup, AppContext> threadGroup2appContext;
+    static void initUtilsConstructors(){
+        if(constructorHashMap!=null) {
+            initUtilsConstructors1()
+        }
+    }
 
-    static {
-        final String version = System.getProperty("java.specification.version");
-        java5 = !"1.4".equals(version);
-        try {
-            classLoaderAddUrlMethod = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-            classLoaderAddUrlMethod.setAccessible(true);
-        } catch (final Exception e) {
-            // may throw security exception
-            log.log(Level.FINE, null, e);
-        }
-        try {
-            final Field threadGroup2appContextField = AppContext.class.getDeclaredField("threadGroup2appContext");
-            threadGroup2appContextField.setAccessible(true);
-            threadGroup2appContext = (Map) threadGroup2appContextField.get(null);
-            final Class class1 = Class.forName("javax.swing.SystemEventQueueUtilities");
-            final Field rootTableKeyField = class1.getDeclaredField("rootTableKey");
-            rootTableKeyField.setAccessible(true);
-            rootTableKey = rootTableKeyField.get(null);
-        } catch (final Exception e) {
-            // TODO correctly catch headless exception
-            log.log(Level.FINE, null, e);
-        }
-        try {
+    static void initUtilsConstructors1(){
             constructorHashMap = HashMap.class.getConstructor();
             constructorConcurrentHashMap = ConcurrentHashMap.class.getConstructor();
             constructorHashSet = HashSet.class.getConstructor();
             constructorTreeSet = TreeSet.class.getConstructor();
             constructorArrayList = ArrayList.class.getConstructor();
+
+    }
+
+    static {
+        try {
+            classLoaderAddUrlMethod = JrrClassUtils.findMethodByParamTypes3(URLClassLoader,"addURL", URL);
+            classLoaderAddUrlMethod.setAccessible(true);
+        } catch (final Exception e) {
+            // may throw security exception
+            log.log(Level.WARNING, null, e);
+        }
+        try {
+            initUtilsConstructors()
         } catch (final Exception e) {
             throw new Error(e);
         }
@@ -99,60 +93,9 @@ public class JrrUtilities3 {
 
     public static Object findJvmObject() throws NoSuchFieldException, IllegalAccessException {
         RuntimeMXBean compilationMXBean = ManagementFactory.getRuntimeMXBean();
-        Object jvm = JrrClassUtils.getFieldValue(compilationMXBean, "jvm");
+        Object jvm = JrrClassUtils.getFieldValueR(new ClRef('sun.management.RuntimeImpl'), compilationMXBean, "jvm");
         return jvm;
     }
-
-
-    public static Object getAwtAppContexts() {
-        final Collection<AppContext> contexts = threadGroup2appContext.values();
-        if (contexts.size() == 1) {
-            return contexts.iterator().next();
-        }
-        return contexts;
-    }
-
-    /**
-     * Methods works since java 6, due to Window#getWindows method
-     */
-    public static Collection<Window> findAwtWindows() {
-        if (rootTableKey == null) {
-            log.fine("rootTableKey is null");
-            return Arrays.asList(Window.getWindows());
-        }
-        HashSet<Window> windows = new HashSet<Window>();
-        Collection<AppContext> appContexts = threadGroup2appContext.values();
-        for (AppContext context : appContexts) {
-
-            final Map awtComponentsMap = (Map) context.get(rootTableKey);
-            if (awtComponentsMap == null) {
-                log.info("awp map is null");
-            } else {
-                final Collection windowList = awtComponentsMap.keySet();
-                windows.addAll((Collection)windowList);
-            }
-        }
-        return windows;
-    }
-
-    public static Collection<Window> findVisibleAwtWindows() {
-        final Collection windowList = findAwtWindows();
-        final Collection<Window> result = new HashSet();
-        if (windowList == null) {
-            log.info("can't find windows");
-            return result;
-        }
-        for (final Object object : windowList) {
-            if (object instanceof Window) {
-                final Window window = (Window) object;
-                if (window.isVisible()) {
-                    result.add(window);
-                }
-            }
-        }
-        return result;
-    }
-
 
     public static JFrame showException(final String title, final Throwable throwable) {
         final JFrame dialog = new JFrame(throwable.getClass().getSimpleName());
@@ -171,9 +114,9 @@ public class JrrUtilities3 {
                 dialog.setLocation(screenSize.width / 2 as int , screenSize.height / 2 as int );
                 dialog.setSize(200, 200);
                 // dialog.setModal(true);
-                if (java5) {
-                    dialog.setAlwaysOnTop(true);
-                }
+
+                dialog.setAlwaysOnTop(true);
+
                 dialog.setVisible(true);
             }
         });
@@ -197,6 +140,7 @@ public class JrrUtilities3 {
     public static Map<String, Map<String, Map<String, Set<ObjectName>>>> buildMBeansInfo(
             final Collection<ObjectName> set) throws NoSuchMethodException, InstantiationException,
             IllegalAccessException, InvocationTargetException {
+        initUtilsConstructors1()
         final Map<String, Map<String, Map<String, Set<ObjectName>>>> map = new HashMap();
         for (final ObjectName objectName : set) {
             final String domain = objectName.getDomain();
@@ -269,14 +213,6 @@ public class JrrUtilities3 {
         return value;
     }
 
-    public static Class getCurrentClass() {
-        return Reflection.getCallerClass(2);
-    }
-
-    public static ClassLoader getCurrentClassLoader() {
-        return Reflection.getCallerClass(2).getClassLoader();
-    }
-
     public static LinkedHashSet<URL> getInitClassPath() {
         final URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
         final LinkedHashSet<URL> hashSet = new LinkedHashSet();
@@ -308,6 +244,7 @@ public class JrrUtilities3 {
             throw new FileNotFoundException("Unable read file : " + file.getAbsoluteFile().getCanonicalPath());
         }
     }
+
 
 
 

@@ -20,7 +20,7 @@ import net.sf.jremoterun.utilities.groovystarter.st.GroovyMethodFinderException;
 
 public class JrrClassUtilsTest extends TestCase {
 
-	private static final Logger log = Logger.getLogger(JrrUtilities.getCurrentClass().getName());
+	private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
 	public void testFinalField4() throws Exception {
 		Assert.assertEquals(TestClass2.fieeel, new Integer(9));

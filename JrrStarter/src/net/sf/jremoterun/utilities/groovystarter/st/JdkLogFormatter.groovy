@@ -25,12 +25,34 @@ public class JdkLogFormatter extends Formatter {
     public boolean logTime = false;
 
     public static Collection<String> ignoreClassesForCurrentClass = JrrClassUtils.ignoreClassesForCurrentClass;
+    public static Logger rootLogger
+
+    static Logger getRootLogger(){
+        if(rootLogger==null) {
+            rootLogger = Logger.getLogger("");
+        }
+        return rootLogger
+    }
+
+
+    static Handler[] findRootHandlers(){
+        Logger logger = getRootLogger()
+        Handler[] handlers = logger.getHandlers();
+        return handlers
+    }
 
     public static ConsoleHandler findConsoleHandler() {
-        Logger logger = Logger.getLogger("");
-        Handler[] handlers = logger.getHandlers();
-        assert handlers.length == 1;
-        ConsoleHandler consoleHandler = (ConsoleHandler) handlers[0];
+        Handler[] handlers = findRootHandlers();
+        if(handlers.length==0){
+            throw new RuntimeException("No log handler found")
+        }
+        if(handlers.length>1){
+            println "found many log handler ${handlers}"
+        }
+        ConsoleHandler consoleHandler = (ConsoleHandler) handlers.toList().find {it instanceof ConsoleHandler};
+        if(consoleHandler==null){
+            throw new RuntimeException("No console handler found from ${handlers.length} : ${handlers}")
+        }
         return consoleHandler;
     }
 

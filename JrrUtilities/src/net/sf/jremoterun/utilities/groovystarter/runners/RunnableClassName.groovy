@@ -2,39 +2,55 @@ package net.sf.jremoterun.utilities.groovystarter.runners;
 
 import net.sf.jremoterun.utilities.JrrClassUtils
 import net.sf.jremoterun.utilities.classpath.ClRef
-import net.sf.jremoterun.utilities.groovystarter.GroovyRunnerConfigurator2
-import net.sf.jremoterun.utilities.groovystarter.LoadScriptFromFileUtils;
+
+import net.sf.jremoterun.utilities.groovystarter.LoadScriptFromFileUtils
+import net.sf.jremoterun.utilities.groovystarter.RunnerFrom
+import net.sf.jremoterun.utilities.groovystarter.seqrunnerhelper.CallerInfo
+import net.sf.jremoterun.utilities.groovystarter.seqrunnerhelper.CallerInfoGetter
+import net.sf.jremoterun.utilities.groovystarter.seqrunnerhelper.RunnerCreationCallStack;
 
 import java.util.logging.Logger;
 import groovy.transform.CompileStatic;
 
 
 @CompileStatic
-class RunnableClassName implements Runnable{
+class RunnableClassName implements Runnable, RunnerCreationCallStack, CallerInfo, CallerInfoGetter {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
-    ClRef cnr;
+    public ClRef clRef;
 
-    ClassLoader classLoader = JrrClassUtils.currentClassLoader
+    public ClassLoader classLoader = JrrClassUtils.getCurrentClassLoader()
 
-    RunnableClassName(ClRef cnr) {
-        this.cnr = cnr
+    RunnerFrom creationInfo;
+    Object callerInfo;
+
+    RunnableClassName(ClRef clRef) {
+        this.clRef = clRef
     }
 
-    RunnableClassName(ClRef cnr, ClassLoader classLoader) {
-        this.cnr = cnr
+    RunnableClassName(ClRef clRef, ClassLoader classLoader) {
+        this.clRef = clRef
         this.classLoader = classLoader
+        assert clRef!=null
     }
 
     @Override
     void run() {
-        Object obj = cnr.newInstance2(classLoader);
+        Object obj = clRef.newInstance2(classLoader);
+        if(obj instanceof RunnerCreationCallStack){
+            obj.setCreationInfo(creationInfo)
+        }
+
+        if(obj instanceof  CallerInfo){
+            obj.setCallerInfo(this)
+        }
         LoadScriptFromFileUtils.runNoParams(obj,null)
     }
 
     @Override
     String toString() {
-        return "${this.class.simpleName} : ${cnr}"
+        return "${getClass().getSimpleName()} : ${clRef}"
     }
+
 }

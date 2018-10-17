@@ -6,12 +6,10 @@ import net.sf.jremoterun.utilities.FileOutputStream2
 import net.sf.jremoterun.utilities.NewValueListener
 import net.sf.jremoterun.utilities.classpath.AddFilesToUrlClassLoaderGroovy
 import net.sf.jremoterun.utilities.classpath.ClRef
-import net.sf.jremoterun.utilities.classpath.ClRef
 import net.sf.jremoterun.utilities.groovystarter.seqpattern.JrrRunnerPhaseI
 import net.sf.jremoterun.utilities.groovystarter.seqpattern.SeqPatternRunnerGmrp
 
 import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentHashMap
 
 @CompileStatic
 public class GroovyMethodRunnerParams {
@@ -34,7 +32,7 @@ public class GroovyMethodRunnerParams {
 
     public volatile GroovyClassLoader groovyClassLoader;
 
-    private volatile File userHome = new File(System.getProperty("user.home"));
+    public volatile File userHome = new File(System.getProperty("user.home"));
 
 
     public volatile File groovyUserConfigRaw = new File(userHome, "${JrrStarterConstatnts.jrrConfigDir}/${JrrStarterConstatnts.rawConfigFileName}");
@@ -47,13 +45,12 @@ public class GroovyMethodRunnerParams {
 
     public volatile File groovyHostConfigWindowsRaw = new File("${JrrStarterConstatnts.jrrConfigDirWindowsAllUsers}/${JrrStarterConstatnts.rawConfigFileName}");
 
+    public volatile boolean loadUserRawWindowsConfigShared = true;
+    public volatile boolean loadGrHomeRawConfig = true;
+
     public volatile SeqPatternRunnerGmrp seqPatternRunnerGmrp = new SeqPatternRunnerGmrp();
 
     public volatile List<String> args;
-
-//    public Map<JrrRunnerPhaseI, List<Runnable>> listenersBefore = new ConcurrentHashMap()
-//    public Map<JrrRunnerPhaseI, List<Runnable>> listenersAfter = new ConcurrentHashMap()
-
 
     public
     volatile boolean showExceptionInSwingWindowV = false;
@@ -64,9 +61,6 @@ public class GroovyMethodRunnerParams {
 
     public
     volatile NewValueListener<Throwable> onExceptionOccured = new PrintExceptionListener();
-
-
-//    public volatile List<Runnable> phaseChangedListener = [];
 
     public volatile AddFilesToUrlClassLoaderGroovy addFilesToClassLoader;
     public volatile AddFilesToUrlClassLoaderGroovy addFilesToClassLoaderSystem;
@@ -84,16 +78,23 @@ public class GroovyMethodRunnerParams {
             if (fileOut != null) {
                 fileOut.flush()
             }
-            System.exit(1);
+            SystemExit.exit(1);
         }
     };
 
-    /**
-     * use getInstance() method
-     */
-    @Deprecated
-    static volatile GroovyMethodRunnerParams gmrp;
+    public static volatile GroovyMethodRunnerParams gmrp;
 
+    public static GroovyMethodRunnerParams getGmrpn(){
+        if(gmrp==null){
+            throw new NullPointerException('gmrp is null')
+        }
+        return gmrp
+    }
+
+    static GroovyMethodRunnerParams createInstance() {
+        assert gmrp==null
+        return getInstance()
+    }
 
     static GroovyMethodRunnerParams getInstance() {
         if (gmrp != null) {
@@ -101,18 +102,24 @@ public class GroovyMethodRunnerParams {
         }
         Map classloaders = SharedObjectsUtils.getGlobalMap();
         gmrp = (GroovyMethodRunnerParams) classloaders
-                .get(GroovyMethodRunnerParams.name);
+                .get(GroovyMethodRunnerParams.getName());
         if (gmrp != null) {
             if (enableManyClassLoaders) {
                 println "GroovyMethodRunnerParams created in different classloader"
             } else {
-                throw new Exception("GroovyMethodRunnerParams created in different classloader ${gmrp.class.classLoader} ${GroovyMethodRunnerParams.classLoader}");
+                throw new Exception("GroovyMethodRunnerParams created in different classloader ${gmrpn.getClass().getClassLoader()} ${GroovyMethodRunnerParams.getClassLoader()}");
             }
         }
         if (gmrp == null) {
+            //Thread.dumpStack()
             gmrp = new GroovyMethodRunnerParams();
         }
         return gmrp;
+    }
+
+
+    File detectHomeFromWindows(){
+        return JrrStarterVariables2.getInstance().detectHomeFromWindows();
     }
 
 
@@ -150,7 +157,7 @@ public class GroovyMethodRunnerParams {
 
     @Deprecated
     void addL(JrrRunnerPhaseI phase, boolean before, Callable listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
 
     @Deprecated
@@ -159,21 +166,21 @@ public class GroovyMethodRunnerParams {
     }
 
     static void addL(JrrRunnerPhaseI phase, boolean before, File listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
 
 
     @Deprecated
     static void addL(JrrRunnerPhaseI phase, boolean before, String listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
 
     static void addL(JrrRunnerPhaseI phase, boolean before, Class listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
 
     static void addL(JrrRunnerPhaseI phase, boolean before, ClRef listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
 
 
@@ -185,24 +192,26 @@ public class GroovyMethodRunnerParams {
 
     @Deprecated
     static void addListenerOrRunIfPassed2(JrrRunnerPhaseI phase, boolean before, File listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
 
     @Deprecated
     static void addListenerOrRunIfPassed2(JrrRunnerPhaseI phase, boolean before, String listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
 
     @Deprecated
     static void addListenerOrRunIfPassed2(JrrRunnerPhaseI phase, boolean before, Class listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
 
 
     @Deprecated
     static void addListenerOrRunIfPassed2(JrrRunnerPhaseI phase, boolean before, ClRef listener) {
-        gmrp.seqPatternRunnerGmrp.addL(phase, before, listener)
+        gmrpn.seqPatternRunnerGmrp.addL(phase, before, listener)
     }
+
+
 
 
 }
