@@ -12,5 +12,6 @@ interface CustomObjectHandler {
     void add(AddFilesToClassLoaderCommon adder,Object object);
 
     File resolveToFile(Object object);
+    File resolveToFileIfDownloaded(Object object);
 
 }
