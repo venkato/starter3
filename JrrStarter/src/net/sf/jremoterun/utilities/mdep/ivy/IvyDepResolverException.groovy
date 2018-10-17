@@ -8,11 +8,15 @@ import groovy.transform.CompileStatic;
 
 
 @CompileStatic
-class IvyDepResolverException extends Exception{
+class IvyDepResolverException extends Exception {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
     ResolveReport rr;
+
+    IvyDepResolverException(String msg, Throwable cause) {
+        super(msg, cause)
+    }
 
     IvyDepResolverException(ResolveReport rr) {
         super(rr.getAllProblemMessages().toString())

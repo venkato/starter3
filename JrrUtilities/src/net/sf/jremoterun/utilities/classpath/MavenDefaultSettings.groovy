@@ -1,7 +1,10 @@
 package net.sf.jremoterun.utilities.classpath
 
 import groovy.transform.AutoClone;
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
+import net.sf.jremoterun.utilities.classpath.finders.GradleFileFinder
+import net.sf.jremoterun.utilities.classpath.finders.GrapeFileFinder
+import net.sf.jremoterun.utilities.classpath.finders.MavenFileFinder;
 
 import java.io.File;
 import java.util.*;
@@ -20,18 +23,38 @@ public class MavenDefaultSettings {
 
     public volatile File userHome = new File(System.getProperty("user.home"));
 
-    public volatile File mavenLocalDir = new File(userHome, ".m2/repository");
+    public volatile GrapeFileFinder grapeFileFinder = new GrapeFileFinder(new File(userHome, ".ivy2/cache"));
 
-    public volatile File gradleLocalDir = new File(userHome, ".gradle/caches/modules-2/files-2.1");
+    public volatile GradleFileFinder gradleFileFinder = new GradleFileFinder(new File(userHome, ".gradle/caches/modules-2/files-2.1"));
 
-    public volatile File grapeLocalDir = new File(userHome, ".ivy2/cache");
+    public volatile MavenFileFinder mavenFileFinder = new MavenFileFinder(new File(userHome, ".m2/repository"));
+
+
 
     public volatile Collection<String> badMavenVersionWords = ["alpha", "beta", "-cr", "-rc","snapshot",".cr",".rc"];
 
-    public volatile MavenDependenciesResolver mavenDependenciesResolver;
+    volatile MavenDependenciesResolver mavenDependenciesResolver;
     public volatile File jrrDownloadDir;
     public volatile CustomObjectHandler customObjectHandler;
     public volatile MavenVersionComparatorI mavenVersionComparator = new MavenVersionComparator();
 
+    @Deprecated
+    void setMavenLocalDir3(File f){
+        mavenFileFinder.setMavenLocalDir2( f)
+    }
+
+    @Deprecated
+    void setGrapeLocalDir3(File f){
+        grapeFileFinder.setMavenLocalDir2( f)
+    }
+
+    @Deprecated
+    void setGradleLocalDir3(File f){
+        gradleFileFinder.setMavenLocalDir2(f)
+    }
+
+
     public static volatile MavenDefaultSettings mavenDefaultSettings = new MavenDefaultSettings();
+
+
 }

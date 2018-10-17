@@ -7,6 +7,10 @@
 .gradle/
 gradlew.bat
 *.iml
+*/*.iml
+*/.gradle/
+*/build/
+*/.gitignore
 
 # Log file
 *.log
@@ -23,24 +27,28 @@ gradlew.bat
 *.zip
 *.tar.gz
 *.rar
+
 custom/
 custom1/
 custom2/
 custom3/
 build/
 onejar/jrrutilities.jar
-firstdownload/javarunner.bat
-firstdownload/javarunnerw.bat
-firstdownload/.gradle/
-firstdownload/build/
+firstdownload/gr_custom.sh
+firstdownload/gr_custom.bat
+firstdownload/out/
 firstdownload/logs/
 firstdownload/jrrdownload/
-JrrUtilities/.gradle/
-JrrUtilities/build/
-JrrStarter/build/
-JrrStarter/.gradle/
-JrrInit/build/
-JrrInit/.gradle/
+
+#firstdownload/*.iml
+#firstdownload/build/
+#JrrUtilities/.gradle/
+#JrrUtilities/build/
+#JrrUtilities/*.iml
+#JrrStarter/build/
+#JrrStarter/.gradle/
+#JrrInit/.gradle/
+
 libs/copy/
 
 

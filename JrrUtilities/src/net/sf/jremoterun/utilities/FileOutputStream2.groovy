@@ -10,7 +10,7 @@ class FileOutputStream2 extends FileOutputStream {
 
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
-    final File file;
+    public final File file;
 
 
 
