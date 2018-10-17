@@ -68,7 +68,7 @@ ${shortcutsDescription}"""
     @Deprecated
     static Runnable createRunnerFromFile(File file) {
         return RunnableFactory.createRunner(file)
-//        JrrUtilities3.checkFileExist(file)
+//        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
 //        if (!file.file) {
 //            throw new IllegalArgumentException("Not a file : ${file}")
 //        }

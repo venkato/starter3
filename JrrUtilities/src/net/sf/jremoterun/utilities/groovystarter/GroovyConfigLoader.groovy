@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 import groovy.transform.CompileStatic;
 
 
+@Deprecated
 @CompileStatic
 abstract class GroovyConfigLoader<T> extends GroovyRunnerConfigurator2{
 
@@ -16,7 +17,13 @@ abstract class GroovyConfigLoader<T> extends GroovyRunnerConfigurator2{
 
     public static String varName = 'a'
 
-    public static MethodClosure loadConfigMethod =(MethodClosure) GroovyConfigLoader.&loadConfig;
+    public static MethodClosure loadConfigMethod =(MethodClosure) (Closure)GroovyConfigLoader.&loadConfig;
+
+    /**
+     * Can be null.
+     * Can be used to build ref to files located in subfolder
+     */
+    public File thisFile;
 
     @Override
     final void doConfig() {

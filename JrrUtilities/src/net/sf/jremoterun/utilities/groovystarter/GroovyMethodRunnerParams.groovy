@@ -6,12 +6,10 @@ import net.sf.jremoterun.utilities.FileOutputStream2
 import net.sf.jremoterun.utilities.NewValueListener
 import net.sf.jremoterun.utilities.classpath.AddFilesToUrlClassLoaderGroovy
 import net.sf.jremoterun.utilities.classpath.ClRef
-import net.sf.jremoterun.utilities.classpath.ClRef
 import net.sf.jremoterun.utilities.groovystarter.seqpattern.JrrRunnerPhaseI
 import net.sf.jremoterun.utilities.groovystarter.seqpattern.SeqPatternRunnerGmrp
 
 import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentHashMap
 
 @CompileStatic
 public class GroovyMethodRunnerParams {
@@ -34,7 +32,7 @@ public class GroovyMethodRunnerParams {
 
     public volatile GroovyClassLoader groovyClassLoader;
 
-    private volatile File userHome = new File(System.getProperty("user.home"));
+    public volatile File userHome = new File(System.getProperty("user.home"));
 
 
     public volatile File groovyUserConfigRaw = new File(userHome, "${JrrStarterConstatnts.jrrConfigDir}/${JrrStarterConstatnts.rawConfigFileName}");
@@ -46,6 +44,9 @@ public class GroovyMethodRunnerParams {
     public volatile File groovyHostConfigLinuxRaw = new File("${JrrStarterConstatnts.jrrConfigDirLinuxAllUsers}/${JrrStarterConstatnts.rawConfigFileName}");
 
     public volatile File groovyHostConfigWindowsRaw = new File("${JrrStarterConstatnts.jrrConfigDirWindowsAllUsers}/${JrrStarterConstatnts.rawConfigFileName}");
+
+    public volatile boolean loadUserRawWindowsConfigShared = true;
+    public volatile boolean loadGrHomeRawConfig = true;
 
     public volatile SeqPatternRunnerGmrp seqPatternRunnerGmrp = new SeqPatternRunnerGmrp();
 
@@ -113,6 +114,11 @@ public class GroovyMethodRunnerParams {
             gmrp = new GroovyMethodRunnerParams();
         }
         return gmrp;
+    }
+
+
+    File detectHomeFromWindows(){
+        return JrrStarterVariables2.getInstance().detectHomeFromWindows();
     }
 
 

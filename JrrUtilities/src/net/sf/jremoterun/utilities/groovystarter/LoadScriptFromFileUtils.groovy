@@ -2,7 +2,6 @@ package net.sf.jremoterun.utilities.groovystarter
 
 import groovy.transform.CompileStatic
 import net.sf.jremoterun.utilities.JrrClassUtils
-import net.sf.jremoterun.utilities.JrrUtilities3
 
 import java.util.logging.Logger
 
@@ -12,6 +11,10 @@ class LoadScriptFromFileUtils {
     private static final Logger log = JrrClassUtils.getJdkLogForCurrentClass();
 
     public static String varNameInScript = "a"
+
+    public static volatile boolean checkFileEndsWithGroovy = true
+
+    public static long maxGroovyFileSize = 1_000_000;
 
 
     static Object loadScriptFromFile(File file, GroovyClassLoader groovyClassLoader) {
@@ -56,20 +59,34 @@ class LoadScriptFromFileUtils {
             instance.loadConfig(param)
             return null
         }
+        if (instance instanceof GroovyConfigLoader2) {
+            instance.loadConfig(param)
+            return null
+        }
         if (instance instanceof Script) {
             Script s = (Script) instance;
             s.binding.setVariable(varNameInScript, param)
             return s.run()
         }
 //        return JrrClassUtils.invokeJavaMethod(instance, 'run')
-        throw new IllegalArgumentException("stranage class ${instance.class.getName()} ${errorMsg}")
+        String failedClassName = instance.getClass().getName();
+        throw new IllegalArgumentException("stranage class ${failedClassName} ${errorMsg}")
 
     }
 
     static Class loadClassFromFile(File file, GroovyClassLoader groovyClassLoader) {
         assert groovyClassLoader != null
-        JrrUtilities3.checkFileExist(file)
-        file = file.absoluteFile.canonicalFile
+        net.sf.jremoterun.utilities.JrrUtilitiesFile.checkFileExist(file)
+        file = file.getAbsoluteFile().getCanonicalFile()
+        if(LoadScriptFromFileUtils.checkFileEndsWithGroovy){
+            if(!file.getName().endsWith('.groovy')){
+                throw new Exception("that is not groovy file : ${file.getAbsolutePath()}")
+            }
+            long length = file.length()
+            if (LoadScriptFromFileUtils.maxGroovyFileSize != 0 && length > LoadScriptFromFileUtils.maxGroovyFileSize) {
+                throw new Exception("file length too big ${length/1000} kbytes, ${file.getAbsolutePath()}")
+            }
+        }
         Class clazz = groovyClassLoader.parseClass(file)
         assert clazz != null
         return clazz

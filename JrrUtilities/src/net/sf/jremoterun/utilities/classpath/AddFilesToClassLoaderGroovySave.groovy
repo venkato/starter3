@@ -51,17 +51,27 @@ abstract class AddFilesToClassLoaderGroovySave extends AddFilesToClassLoaderGroo
     void addGenericEntery(Object object) {
         if (object instanceof File) {
             File  f= (File) object;
-            assert f.exists()
+            if(!f.exists()){
+                onException new FileNotFoundException(f.getAbsolutePath())
+            }
         }
         if( object instanceof Collection ) {
-            throw new IllegalArgumentException("Collection : ${object}")
+            onException new IllegalArgumentException("Collection : ${object}")
         }
         addElement(object)
     }
 
     @Override
     void addSourceGenericAll(List objects) {
-        objects.each {addSourceGeneric(it)}
+        int count3 =-1
+        objects.each {
+            try {
+                addSourceGeneric(it)
+            } catch (Throwable e) {
+                logAdder.info "failed add ${count3} ${it} ${e}"
+                onException e
+            }
+        }
     }
 
     void addSourceF(File source) throws Exception{
@@ -83,5 +93,11 @@ abstract class AddFilesToClassLoaderGroovySave extends AddFilesToClassLoaderGroo
     @Override
     void addSourceS(String source) throws Exception {
         getSourceElements().add(source);
+    }
+
+    // TODO refactor, return null not nice
+    File addSourceMNoExceptionOnMissing(MavenId mavenId){
+        getSourceElements().add(mavenId);
+        return null
     }
 }

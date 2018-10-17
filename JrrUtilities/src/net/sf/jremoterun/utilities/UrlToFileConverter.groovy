@@ -16,16 +16,16 @@ class UrlToFileConverter {
         if(url==null){
             throw new NullPointerException("arg is null");
         }
-        if(url.protocol != 'file'){
-            throw new UnsupportedOperationException("protocal not supported : ${url}")
+        if(url.getProtocol() != 'file'){
+            throw new UnsupportedOperationException("protocol not supported : ${url}")
         }
 
-        String file = url.file
+        String file = url.getFile()
         if(file==null){
             throw new IOException("failed convert url ${url}")
         }
         file = file.replace('%20',' ')
-        return file as File
+        return new File(file);
     }
 
 }
